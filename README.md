@@ -1,18 +1,24 @@
-# zen-dots — guia de setup (Fedora WSL2 / Fedora KDE / macOS)
+[HIGH CONFIDENCE]
 
-Sem script executável. Siga a seção da sua máquina.
-
-## Prioridade de instalação: gerenciador nativo primeiro, mise só como fallback
-
-Pra qualquer ferramenta: tente `dnf` (Fedora) ou `brew` (macOS) primeiro. `mise` entra **só** para o que o gerenciador nativo não tem — confirmado ausente dos repositórios oficiais do Fedora: `starship`, `lazygit`, `yazi`, `topgrade`. `eza` e `lnav` têm histórico mais instável — o guia tenta o dnf e cai pro mise se falhar.
-
-No macOS o `brew` já cobre tudo isso nativamente — `mise` fica reservado só para runtimes (`node`/`python`/`rust`/`go`).
-
-Duas coisas continuam fora do mise por motivo técnico, não preferência: **shell de login** (`fish`, precisa de caminho absoluto em `/etc/shells`, não um shim) e **apps GUI** (`Zed`, `Ghostty`, precisam de integração com o desktop).
+Here is your setup guide translated into English, maintaining exact technical commands, paths, and logic while updating code block shell labels where applicable.
 
 ---
 
-## Comum às 3 máquinas
+# zen-dots — setup guide (Fedora WSL2 / Fedora KDE / macOS)
+
+No executable scripts. Follow the section for your specific machine.
+
+## Installation priority: native package manager first, mise strictly as fallback
+
+For any tool: try `dnf` (Fedora) or `brew` (macOS) first. `mise` is used **only** for packages missing from official native package managers — confirmed missing from Fedora official repositories: `starship`, `lazygit`, `yazi`, `topgrade`. `eza` and `lnav` have a less consistent package history — the guide attempts installation via dnf first and falls back to mise if it fails.
+
+On macOS, `brew` covers all of these natively — `mise` is reserved exclusively for language runtimes (`node`/`python`/`rust`/`go`).
+
+Two components remain outside of mise due to technical constraints rather than preference: **login shell** (`fish`, requires an absolute binary path registered in `/etc/shells`, not a shim) and **GUI applications** (`Zed`, `Ghostty`, which require desktop environment integration).
+
+---
+
+## Common to all 3 machines
 
 ### mise — runtimes + fallback
 
@@ -30,9 +36,10 @@ uv = "latest"
 experimental = true
 python.uv_venv_auto = "create|source"' > ~/.config/mise/config.toml
 ~/.local/bin/mise install
+
 ```
 
-Se `python@3.13` ainda cair pra compilar do zero e falhar (mesmo erro do `python-build`), force binário precompilado em vez de source: `mise settings set python.compile false` e rode `mise install` de novo — ou troque pra uma versão patch específica (ex: `3.13.2`) se `3.13` sozinho não achar um build pronto.
+If `python@3.13` falls back to building from source and fails (similar to `python-build` errors), force precompiled binaries instead: run `mise settings set python.compile false` and execute `mise install` again — or target a specific patch version (e.g., `3.13.2`) if `3.13` fails to find a pre-built binary.
 
 ### fish — ~/.config/fish/config.fish
 
@@ -44,10 +51,10 @@ if test -d /opt/homebrew/bin
     eval (/opt/homebrew/bin/brew shellenv)
 end
 
-# --- vi keybinds (indicador vi-mode do starship) ----------------------------
+# --- vi keybinds (starship vi-mode indicator) -------------------------------
 set -g fish_key_bindings fish_vi_key_bindings
 
-# --- runtimes / ferramentas / navegação (cada um só roda se existir) -------
+# --- runtimes / tools / navigation (each executes only if binary exists) ----
 type -q mise     && mise activate fish | source
 type -q zoxide   && zoxide init fish | source
 type -q starship && starship init fish | source
@@ -55,7 +62,7 @@ type -q starship && starship init fish | source
 # --- fzf (Ctrl-T, Ctrl-R, Alt-C) --------------------------------------------
 type -q fzf && fzf --fish | source
 
-# --- notificação cross-platform: mesmo nome de comando nas 3 máquinas ------
+# --- cross-platform notifications: unified command name across all 3 machines ---
 function notify
     if type -q terminal-notifier
         terminal-notifier -title (test -n "$argv[1]"; and echo $argv[1]; or echo "Shell") -message $argv[2]
@@ -64,20 +71,22 @@ function notify
     end
 end
 
-# --- aliases: só substitutos diretos e seguros ------------------------------
+# --- aliases: direct and safe drop-in replacements only ----------------------
 alias ls "eza --icons --group-directories-first"
 alias ll "eza -l --icons --group-directories-first"
 alias cat "bat --paging=never"
 alias vim "nvim"' > ~/.config/fish/config.fish
+
 ```
 
 ### starship (preset)
 
 ```bash
 starship preset nerd-font-symbols -o ~/.config/starship.toml
+
 ```
 
-### lnav — highlight de log por regex
+### lnav — regex log highlighting
 
 ```bash
 mkdir -p ~/.lnav/formats/installed
@@ -90,9 +99,10 @@ echo '{
     }
   }
 }' > ~/.lnav/formats/installed/custom-highlights.json
+
 ```
 
-### topgrade — atualização de tudo (dnf/brew + mise + flatpak)
+### topgrade — system-wide upgrades (dnf/brew + mise + flatpak)
 
 ```bash
 mkdir -p ~/.config
@@ -102,11 +112,12 @@ no_retry = false
 
 [git]
 max_concurrency = 5' > ~/.config/topgrade.toml
+
 ```
 
-Rode `topgrade` para o que ele detecta nativamente (dnf/brew, flatpak, git repos). Ele ainda não tem confirmação de suporte a `mise` — rode `mise upgrade` separadamente até validar isso no seu ambiente (`topgrade --dry-run` mostra os passos detectados).
+Run `topgrade` for components it detects natively (dnf/brew, flatpak, git repositories). It does not officially confirm full native support for `mise` — run `mise upgrade` independently until verified in your local setup (`topgrade --dry-run` displays all detected routines).
 
-### LazyVim — editor de terminal, papel específico: edição sem GUI disponível
+### LazyVim — terminal editor, designated role: non-GUI editing environments
 
 ```bash
 mv ~/.config/nvim ~/.config/nvim.bak 2>/dev/null || true
@@ -117,125 +128,138 @@ echo 'return {
   { "folke/tokyonight.nvim", opts = { style = "night" } },
   { "LazyVim/LazyVim", opts = { colorscheme = "tokyonight-night" } },
 }' > ~/.config/nvim/lua/plugins/colorscheme.lua
-nvim   # plugins instalam sozinhos no primeiro start
+nvim   # plugins install automatically on first startup
+
 ```
 
-`lazygit` cobre git (stage/diff/branch); LazyVim cobre edição de arquivo quando não há GUI disponível; Zed cobre o resto.
+`lazygit` handles Git operations (stage/diff/branch); LazyVim handles file editing when a GUI is unavailable; Zed handles primary development tasks.
 
 ---
 
-## Fedora WSL2 (distro oficial)
+## Fedora WSL2 (official distribution)
 
-### 1. Instalar
+### 1. Install
 
 ```powershell
 wsl --list --online
 wsl --install FedoraLinux-44
+
 ```
 
-### 2. Pacotes de sistema + toolchain de build (equivalente ao base-devel do Arch)
+### 2. System packages + build toolchain (equivalent to Arch base-devel)
 
-O Fedora não tem um meta-pacote único — é um grupo do dnf. Dois relatos conflitantes sobre a sintaxe: nome de exibição entre aspas funciona em alguns testes recentes, mas falha em outros com "No match for argument" — o ID em minúsculo é a forma mais confiável, use ele:
+Fedora lacks a single meta-package — build tools are packaged as a DNF group. Using lowercase group IDs avoids execution failures seen with quoted display names ("No match for argument"):
 
 ```bash
 sudo dnf upgrade --refresh -y
 sudo dnf group install -y development-tools
 sudo dnf install -y git curl wget unzip fish fzf man-db less openssh-clients \
   wl-clipboard fontconfig libnotify
+
 ```
 
-### 3. CLI tools — dnf primeiro, um por um (evita que um pacote ausente derrube o lote inteiro)
+### 3. CLI tools — dnf first, installed individually to prevent missing packages from breaking the batch
 
 ```bash
 sudo dnf install -y bat ripgrep fd-find zoxide git-delta neovim eza lnav
 
 mise use -g starship lazygit yazi topgrade
+
 ```
 
-### 4. Shell padrão → fish
+### 4. Default shell → fish
 
 ```bash
 grep -qxF /usr/bin/fish /etc/shells || echo /usr/bin/fish | sudo tee -a /etc/shells
 chsh -s /usr/bin/fish
+
 ```
 
-`chsh` só vale a partir do próximo login. Pra trocar na sessão atual agora, sem fechar o terminal:
+`chsh` takes effect starting at the next login. To switch immediately in the current active shell:
 
 ```bash
 exec fish
+
 ```
 
-### 5. Notificação (toast do Windows)
+### 5. Notifications (Windows Toast integration)
 
 ```bash
 mkdir -p ~/.local/bin
-# baixe wsl-notify-send.exe: https://github.com/stuartleeks/wsl-notify-send/releases
+# download wsl-notify-send.exe: https://github.com/stuartleeks/wsl-notify-send/releases
 echo 'alias notify-send="wsl-notify-send.exe"' >> ~/.config/fish/config.fish
+
 ```
 
-### 6. Zed, Ghostty, fonte — ficam no lado Windows
+### 6. Zed, Ghostty, Fonts — installed on host Windows side
 
-Ghostty não roda em Windows — o WSL segue usando Windows Terminal. Zed: instale no Windows e conecte na distro Fedora como alvo remoto (mesmo padrão do VS Code Remote-WSL). Fonte também é instalada no Windows.
+Ghostty does not support Windows directly — WSL relies on Windows Terminal. Zed: install natively on Windows and connect to the Fedora WSL instance as a remote target (identical to the VS Code Remote-WSL pattern). Fonts must also be installed directly on Windows.
 
 ---
 
 ## Fedora KDE (bare-metal / VM)
 
-### 1. Pacotes de sistema + toolchain de build
+### 1. System packages + build toolchain
 
 ```bash
 sudo dnf upgrade --refresh -y
 sudo dnf group install -y development-tools
 sudo dnf install -y git curl wget unzip fish fzf man-db less openssh-clients \
   wl-clipboard fontconfig libnotify
+
 ```
 
-### 2. CLI tools — mesmo padrão do WSL acima
+### 2. CLI tools — same methodology as WSL above
 
 ```bash
 sudo dnf install -y bat ripgrep fd-find zoxide git-delta neovim eza lnav
 
 mise use -g starship lazygit yazi topgrade
+
 ```
 
-### 3. Shell padrão → fish
+### 3. Default shell → fish
 
 ```bash
 grep -qxF /usr/bin/fish /etc/shells || echo /usr/bin/fish | sudo tee -a /etc/shells
 chsh -s /usr/bin/fish
+
 ```
 
-`chsh` só vale a partir do próximo login. Pra trocar agora, na sessão atual:
+`chsh` takes effect starting at the next login. To switch immediately in the current active shell:
 
 ```bash
 exec fish
+
 ```
 
-### 4. Fonte
+### 4. Fonts
 
 ```bash
 mkdir -p ~/.local/share/fonts
 curl -Lo /tmp/jbmono.zip "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"
 unzip -oq /tmp/jbmono.zip -d ~/.local/share/fonts && rm -f /tmp/jbmono.zip
 fc-cache -f ~/.local/share/fonts
+
 ```
 
-### 5. Ghostty e Zed — via terra (nenhum dos dois está nos repos oficiais do Fedora)
+### 5. Ghostty and Zed — via Terra repository (neither binary exists in Fedora official repositories)
 
 ```bash
 sudo dnf install --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra$(rpm -E %fedora)" -y terra-release
 sudo dnf install -y ghostty zed
+
 ```
 
-### 6. Notificação
+### 6. Notifications
 
-Já nativa via `libnotify`, instalado no passo 1.
+Natively supported via `libnotify` installed in Step 1.
 
 ---
 
 ## macOS
 
-### 1. Homebrew — cobre tudo nativamente aqui, mise fica só com os runtimes
+### 1. Homebrew — natively covers CLI tools on macOS; mise handles runtimes only
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -244,32 +268,36 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 brew install git curl fzf fish openssh eza bat ripgrep fd zoxide git-delta \
   starship lazygit neovim topgrade yazi lnav terminal-notifier
 brew install --cask zed ghostty font-jetbrains-mono-nerd-font
+
 ```
 
-### 2. Shell padrão → fish
+### 2. Default shell → fish
 
 ```bash
 echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
 chsh -s /opt/homebrew/bin/fish
+
 ```
 
-`chsh` só vale a partir do próximo login. Pra trocar agora, na sessão atual:
+`chsh` takes effect starting at the next login. To switch immediately in the current active shell:
 
 ```bash
 exec fish
+
 ```
 
-### 3. Notificação
+### 3. Notifications
 
-Já resolvida pelo `terminal-notifier` instalado acima — a função `notify` do `config.fish` detecta e usa automaticamente.
+Handled via `terminal-notifier` installed in Step 1 — the `notify` function defined in `config.fish` automatically detects and uses this binary.
 
 ---
 
-## Verificação final (qualquer máquina)
+## Final verification (all platforms)
 
 ```fish
 for bin in mise starship nvim lazygit eza bat rg fd delta fish fzf lnav topgrade
     printf '%-10s ' $bin
     type -q $bin; and $bin --version 2>/dev/null | head -n1; or echo MISSING
 end
+
 ```
