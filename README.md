@@ -1,548 +1,275 @@
-# zen-dots
+# zen-dots — guia de setup (Fedora WSL2 / Fedora KDE / macOS)
 
-> Keyboard-first. Visually silent. Contextually aware.
+Sem script executável. Siga a seção da sua máquina.
 
-Dotfiles for a minimal and reproducible development environment.
-Tested on **Arch Linux (WSL2)** and **macOS (ARM)**.
+## Prioridade de instalação: gerenciador nativo primeiro, mise só como fallback
 
----
+Pra qualquer ferramenta: tente `dnf` (Fedora) ou `brew` (macOS) primeiro. `mise` entra **só** para o que o gerenciador nativo não tem — confirmado ausente dos repositórios oficiais do Fedora: `starship`, `lazygit`, `yazi`, `topgrade`. `eza` e `lnav` têm histórico mais instável — o guia tenta o dnf e cai pro mise se falhar.
 
-## Philosophy
+No macOS o `brew` já cobre tudo isso nativamente — `mise` fica reservado só para runtimes (`node`/`python`/`rust`/`go`).
 
-Each tool has a single responsibility — no overlap:
-
-| Layer | Responsibility |
-|---|---|
-| **ZSH** | Environment: aliases, pagers, editor, keybinds |
-| **Starship** | Real-time context: git, runtimes, exit codes, vi-mode |
-| **Mise** | Runtime manager: node, python, rust, go, java |
-| **VS Code** | Editor: LSP, diagnostics, formatters, Vim motions |
-| **LazyVim** | Terminal editor: quick edits, git, remote files |
-| **Topgrade** | Maintenance: updates the full stack in one command |
+Duas coisas continuam fora do mise por motivo técnico, não preferência: **shell de login** (`fish`, precisa de caminho absoluto em `/etc/shells`, não um shim) e **apps GUI** (`Zed`, `Ghostty`, precisam de integração com o desktop).
 
 ---
 
-## Repository Structure
+## Comum às 3 máquinas
 
-```
-zen-dots/
-├── config/
-│   ├── zshrc          → ~/.zshrc
-│   ├── gitconfig      → ~/.gitconfig
-│   ├── mise.toml      → ~/.config/mise/config.toml
-│   └── topgrade.toml  → ~/.config/topgrade.toml
-└── vscode/
-    └── settings.json  → ~/.config/Code/User/settings.json       (Linux/WSL)
-                       → ~/Library/Application Support/Code/User/ (macOS)
-```
-
----
-
-## Installation — Arch Linux (WSL2)
-
-### 0. Prerequisites
-
-- Windows 11 (WSL 2.4.4+)
-- PowerShell with administrator privileges
-- Virtualization enabled in BIOS
-
----
-
-### 1. Install Arch Linux
-
-```powershell
-# PowerShell (Admin)
-wsl --install archlinux
-```
-
-The distro opens as root. Set the root password:
-
-```bash
-passwd
-```
-
----
-
-### 2. Base packages and user
-
-```bash
-# Sync and update
-pacman -Syu --noconfirm
-
-# Base packages + tooling via pacman
-pacman -S --noconfirm --needed \
-  base-devel git curl wget unzip zsh fzf man-db less openssh \
-  eza bat ripgrep fd zoxide git-delta starship lazygit \
-  wl-clipboard neovim
-```
-
-Create user with ZSH as the default shell from the start:
-
-```bash
-useradd -m -G wheel -s /bin/zsh your_username
-passwd your_username
-echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel
-chmod 440 /etc/sudoers.d/wheel
-```
-
----
-
-### 3. Locale and `/etc/wsl.conf`
-
-```bash
-# Locale
-sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
-locale-gen
-echo "LANG=en_US.UTF-8" > /etc/locale.conf
-
-# WSL config
-cat <<EOF > /etc/wsl.conf
-[automount]
-enabled = true
-options = "metadata,uid=1000,gid=1000,umask=022,fmask=011"
-
-[network]
-generateResolvConf = true
-hostname = arch-dev
-
-[interop]
-enabled = true
-appendWindowsPath = true
-
-[user]
-default = your_username
-
-[boot]
-systemd = true
-EOF
-```
-
-Restart to apply:
-
-```powershell
-# PowerShell
-wsl --terminate archlinux
-wsl -d archlinux
-```
-
-> From here, all commands run as `your_username`.
-
----
-
-### 4. Mise (runtimes)
+### mise — runtimes + fallback
 
 ```bash
 curl https://mise.run | sh
-
 mkdir -p ~/.config/mise
-cp ~/dotfiles/config/mise.toml ~/.config/mise/config.toml
+echo '[tools]
+node = "lts"
+python = "3.13"
+rust = "latest"
+go = "latest"
+uv = "latest"
 
+[settings]
+experimental = true
+python.uv_venv_auto = "create|source"' > ~/.config/mise/config.toml
 ~/.local/bin/mise install
 ```
 
----
+Se `python@3.13` ainda cair pra compilar do zero e falhar (mesmo erro do `python-build`), force binário precompilado em vez de source: `mise settings set python.compile false` e rode `mise install` de novo — ou troque pra uma versão patch específica (ex: `3.13.2`) se `3.13` sozinho não achar um build pronto.
 
-### 5. Tooling via Cargo
+### fish — ~/.config/fish/config.fish
 
-Mise has already installed Rust. Activate cargo before continuing:
+```fish
+mkdir -p ~/.config/fish
+echo '# --- PATH -------------------------------------------------------------------
+fish_add_path -g $HOME/.local/bin $HOME/.local/share/mise/shims
+if test -d /opt/homebrew/bin
+    eval (/opt/homebrew/bin/brew shellenv)
+end
 
-```bash
-eval "$(~/.local/bin/mise activate bash)"
-source "$HOME/.cargo/env"
+# --- vi keybinds (indicador vi-mode do starship) ----------------------------
+set -g fish_key_bindings fish_vi_key_bindings
 
-# Tools not available in the official Arch repos
-cargo install yazi-fm topgrade cargo-update cargo-cache
+# --- runtimes / ferramentas / navegação (cada um só roda se existir) -------
+type -q mise     && mise activate fish | source
+type -q zoxide   && zoxide init fish | source
+type -q starship && starship init fish | source
+
+# --- fzf (Ctrl-T, Ctrl-R, Alt-C) --------------------------------------------
+type -q fzf && fzf --fish | source
+
+# --- notificação cross-platform: mesmo nome de comando nas 3 máquinas ------
+function notify
+    if type -q terminal-notifier
+        terminal-notifier -title (test -n "$argv[1]"; and echo $argv[1]; or echo "Shell") -message $argv[2]
+    else if type -q notify-send
+        notify-send $argv[1] $argv[2]
+    end
+end
+
+# --- aliases: só substitutos diretos e seguros ------------------------------
+alias ls "eza --icons --group-directories-first"
+alias ll "eza -l --icons --group-directories-first"
+alias cat "bat --paging=never"
+alias vim "nvim"' > ~/.config/fish/config.fish
 ```
 
-Yazi optional dependencies:
+### starship (preset)
 
 ```bash
-sudo pacman -S --noconfirm --needed \
-  file unzip jq ffmpegthumbnailer imagemagick
+starship preset nerd-font-symbols -o ~/.config/starship.toml
 ```
 
----
-
-### 6. Bat — Tokyo Night theme
+### lnav — highlight de log por regex
 
 ```bash
-mkdir -p ~/.config/bat/themes
-curl -o ~/.config/bat/themes/tokyonight_night.tmTheme \
-  https://raw.githubusercontent.com/folke/tokyonight.nvim/main/extras/sublime/tokyonight_night.tmTheme
-bat cache --build
+mkdir -p ~/.lnav/formats/installed
+echo '{
+  "custom-highlights": {
+    "highlights": {
+      "error": { "pattern": "(?i)error|fail(ed|ure)?", "color": "Red" },
+      "warn":  { "pattern": "(?i)warn(ing)?",           "color": "Yellow" },
+      "ok":    { "pattern": "(?i)success|done|✓",        "color": "Green" }
+    }
+  }
+}' > ~/.lnav/formats/installed/custom-highlights.json
 ```
 
----
-
-### 7. ZSH — Plugins
+### topgrade — atualização de tudo (dnf/brew + mise + flatpak)
 
 ```bash
-mkdir -p ~/.zsh/plugins
+mkdir -p ~/.config
+echo '[misc]
+assume_yes = false
+no_retry = false
 
-git clone --depth=1 https://github.com/Aloxaf/fzf-tab \
-  ~/.zsh/plugins/fzf-tab
-
-git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions \
-  ~/.zsh/plugins/zsh-autosuggestions
-
-git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting \
-  ~/.zsh/plugins/zsh-syntax-highlighting
+[git]
+max_concurrency = 5' > ~/.config/topgrade.toml
 ```
 
----
+Rode `topgrade` para o que ele detecta nativamente (dnf/brew, flatpak, git repos). Ele ainda não tem confirmação de suporte a `mise` — rode `mise upgrade` separadamente até validar isso no seu ambiente (`topgrade --dry-run` mostra os passos detectados).
 
-### 8. Apply dotfiles
-
-```bash
-cp ~/dotfiles/config/zshrc ~/.zshrc
-cp ~/dotfiles/config/gitconfig ~/.gitconfig
-cp ~/dotfiles/config/topgrade.toml ~/.config/topgrade.toml
-
-mkdir -p ~/.config/Code/User
-cp ~/dotfiles/vscode/settings.json ~/.config/Code/User/settings.json
-
-# Apply the official Starship tokyo-night preset
-# This replaces the custom starship.toml — no manual config needed
-starship preset tokyo-night -o ~/.config/starship.toml
-```
-
-Reload shell:
+### LazyVim — editor de terminal, papel específico: edição sem GUI disponível
 
 ```bash
-exec zsh
-```
-
----
-
-### 9. LazyVim
-
-```bash
-# Backup existing config if any
 mv ~/.config/nvim ~/.config/nvim.bak 2>/dev/null || true
-
-# Install LazyVim starter
 git clone https://github.com/LazyVim/starter ~/.config/nvim
 rm -rf ~/.config/nvim/.git
-
-# Open nvim — plugins install automatically on first launch
-nvim
+mkdir -p ~/.config/nvim/lua/plugins
+echo 'return {
+  { "folke/tokyonight.nvim", opts = { style = "night" } },
+  { "LazyVim/LazyVim", opts = { colorscheme = "tokyonight-night" } },
+}' > ~/.config/nvim/lua/plugins/colorscheme.lua
+nvim   # plugins instalam sozinhos no primeiro start
 ```
 
-Apply Tokyo Night theme at `~/.config/nvim/lua/plugins/colorscheme.lua`:
-
-```lua
-return {
-  {
-    "folke/tokyonight.nvim",
-    opts = { style = "night" },
-  },
-  {
-    "LazyVim/LazyVim",
-    opts = { colorscheme = "tokyonight-night" },
-  },
-}
-```
+`lazygit` cobre git (stage/diff/branch); LazyVim cobre edição de arquivo quando não há GUI disponível; Zed cobre o resto.
 
 ---
 
-### 10. Stack verification
+## Fedora WSL2 (distro oficial)
+
+### 1. Instalar
+
+```powershell
+wsl --list --online
+wsl --install FedoraLinux-44
+```
+
+### 2. Pacotes de sistema + toolchain de build (equivalente ao base-devel do Arch)
+
+O Fedora não tem um meta-pacote único — é um grupo do dnf. Dois relatos conflitantes sobre a sintaxe: nome de exibição entre aspas funciona em alguns testes recentes, mas falha em outros com "No match for argument" — o ID em minúsculo é a forma mais confiável, use ele:
 
 ```bash
-mise --version
-starship --version
-nvim --version
-lazygit --version
-eza --version
-bat --version
-rg --version
-fd --version
-delta --version
-topgrade --version
-echo $WAYLAND_DISPLAY   # should return wayland-0 (injected by WSLg automatically)
-wl-copy --version       # should return without error
+sudo dnf upgrade --refresh -y
+sudo dnf group install -y development-tools
+sudo dnf install -y git curl wget unzip fish fzf man-db less openssh-clients \
+  wl-clipboard fontconfig libnotify
 ```
 
----
-
-## Installation — macOS (ARM)
-
-### 0. Prerequisites
-
-- macOS 13 Ventura or later (Apple Silicon)
-- Xcode Command Line Tools
+### 3. CLI tools — dnf primeiro, um por um (evita que um pacote ausente derrube o lote inteiro)
 
 ```bash
-xcode-select --install
+sudo dnf install -y bat ripgrep fd-find zoxide git-delta neovim eza lnav
+
+mise use -g starship lazygit yazi topgrade
 ```
+
+### 4. Shell padrão → fish
+
+```bash
+grep -qxF /usr/bin/fish /etc/shells || echo /usr/bin/fish | sudo tee -a /etc/shells
+chsh -s /usr/bin/fish
+```
+
+`chsh` só vale a partir do próximo login. Pra trocar na sessão atual agora, sem fechar o terminal:
+
+```bash
+exec fish
+```
+
+### 5. Notificação (toast do Windows)
+
+```bash
+mkdir -p ~/.local/bin
+# baixe wsl-notify-send.exe: https://github.com/stuartleeks/wsl-notify-send/releases
+echo 'alias notify-send="wsl-notify-send.exe"' >> ~/.config/fish/config.fish
+```
+
+### 6. Zed, Ghostty, fonte — ficam no lado Windows
+
+Ghostty não roda em Windows — o WSL segue usando Windows Terminal. Zed: instale no Windows e conecte na distro Fedora como alvo remoto (mesmo padrão do VS Code Remote-WSL). Fonte também é instalada no Windows.
 
 ---
 
-### 1. Homebrew
+## Fedora KDE (bare-metal / VM)
+
+### 1. Pacotes de sistema + toolchain de build
+
+```bash
+sudo dnf upgrade --refresh -y
+sudo dnf group install -y development-tools
+sudo dnf install -y git curl wget unzip fish fzf man-db less openssh-clients \
+  wl-clipboard fontconfig libnotify
+```
+
+### 2. CLI tools — mesmo padrão do WSL acima
+
+```bash
+sudo dnf install -y bat ripgrep fd-find zoxide git-delta neovim eza lnav
+
+mise use -g starship lazygit yazi topgrade
+```
+
+### 3. Shell padrão → fish
+
+```bash
+grep -qxF /usr/bin/fish /etc/shells || echo /usr/bin/fish | sudo tee -a /etc/shells
+chsh -s /usr/bin/fish
+```
+
+`chsh` só vale a partir do próximo login. Pra trocar agora, na sessão atual:
+
+```bash
+exec fish
+```
+
+### 4. Fonte
+
+```bash
+mkdir -p ~/.local/share/fonts
+curl -Lo /tmp/jbmono.zip "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"
+unzip -oq /tmp/jbmono.zip -d ~/.local/share/fonts && rm -f /tmp/jbmono.zip
+fc-cache -f ~/.local/share/fonts
+```
+
+### 5. Ghostty e Zed — via terra (nenhum dos dois está nos repos oficiais do Fedora)
+
+```bash
+sudo dnf install --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra$(rpm -E %fedora)" -y terra-release
+sudo dnf install -y ghostty zed
+```
+
+### 6. Notificação
+
+Já nativa via `libnotify`, instalado no passo 1.
+
+---
+
+## macOS
+
+### 1. Homebrew — cobre tudo nativamente aqui, mise fica só com os runtimes
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-On Apple Silicon, Homebrew installs to `/opt/homebrew`. Add to PATH for the current session:
-
-```bash
 eval "$(/opt/homebrew/bin/brew shellenv)"
+
+brew install git curl fzf fish openssh eza bat ripgrep fd zoxide git-delta \
+  starship lazygit neovim topgrade yazi lnav terminal-notifier
+brew install --cask zed ghostty font-jetbrains-mono-nerd-font
 ```
 
-This will be permanent once the dotfiles are applied via `~/.zshrc`.
+### 2. Shell padrão → fish
+
+```bash
+echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
+chsh -s /opt/homebrew/bin/fish
+```
+
+`chsh` só vale a partir do próximo login. Pra trocar agora, na sessão atual:
+
+```bash
+exec fish
+```
+
+### 3. Notificação
+
+Já resolvida pelo `terminal-notifier` instalado acima — a função `notify` do `config.fish` detecta e usa automaticamente.
 
 ---
 
-### 2. Base packages
+## Verificação final (qualquer máquina)
 
-```bash
-brew update
-
-brew install git curl fzf zsh openssh \
-  eza bat ripgrep fd zoxide git-delta \
-  starship lazygit neovim
+```fish
+for bin in mise starship nvim lazygit eza bat rg fd delta fish fzf lnav topgrade
+    printf '%-10s ' $bin
+    type -q $bin; and $bin --version 2>/dev/null | head -n1; or echo MISSING
+end
 ```
-
-> macOS clipboard works natively via `pbcopy`/`pbpaste`. Neovim and VSCodeVim detect this automatically — `wl-clipboard` is not needed.
-
----
-
-### 3. Default shell
-
-macOS ships with ZSH as default since Catalina. Verify:
-
-```bash
-echo $SHELL
-# Expected: /bin/zsh or /opt/homebrew/bin/zsh
-```
-
-To use the Homebrew ZSH (more up-to-date than the system one):
-
-```bash
-echo "/opt/homebrew/bin/zsh" | sudo tee -a /etc/shells
-chsh -s /opt/homebrew/bin/zsh
-```
-
-Restart the terminal to apply.
-
----
-
-### 4. Mise (runtimes)
-
-```bash
-curl https://mise.run | sh
-
-mkdir -p ~/.config/mise
-cp ~/dotfiles/config/mise.toml ~/.config/mise/config.toml
-
-~/.local/bin/mise install
-```
-
----
-
-### 5. Tooling via Brew
-
-Everything with a Homebrew formula goes via brew — faster and integrated with topgrade:
-
-```bash
-# Yazi + optional dependencies (brew resolves everything together)
-brew install yazi ffmpeg sevenzip jq poppler resvg imagemagick
-
-# Update management
-brew install topgrade cargo-update
-```
-
-`cargo-cache` has no brew formula — install via cargo after activating mise:
-
-```bash
-eval "$(~/.local/bin/mise activate bash)"
-cargo install cargo-cache
-```
-
----
-
-### 6. Bat — Tokyo Night theme
-
-```bash
-mkdir -p ~/.config/bat/themes
-curl -o ~/.config/bat/themes/tokyonight_night.tmTheme \
-  https://raw.githubusercontent.com/folke/tokyonight.nvim/main/extras/sublime/tokyonight_night.tmTheme
-bat cache --build
-```
-
----
-
-### 7. ZSH — Plugins
-
-Same commands as Arch:
-
-```bash
-mkdir -p ~/.zsh/plugins
-
-git clone --depth=1 https://github.com/Aloxaf/fzf-tab \
-  ~/.zsh/plugins/fzf-tab
-
-git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions \
-  ~/.zsh/plugins/zsh-autosuggestions
-
-git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting \
-  ~/.zsh/plugins/zsh-syntax-highlighting
-```
-
----
-
-### 8. Apply dotfiles
-
-```bash
-cp ~/dotfiles/config/zshrc ~/.zshrc
-cp ~/dotfiles/config/gitconfig ~/.gitconfig
-cp ~/dotfiles/config/topgrade.toml ~/.config/topgrade.toml
-
-mkdir -p ~/Library/Application\ Support/Code/User
-cp ~/dotfiles/vscode/settings.json \
-  ~/Library/Application\ Support/Code/User/settings.json
-
-# Apply the official Starship tokyo-night preset
-# This replaces the custom starship.toml — no manual config needed
-starship preset tokyo-night -o ~/.config/starship.toml
-```
-
-Reload shell:
-
-```bash
-exec zsh
-```
-
----
-
-### 9. LazyVim
-
-```bash
-mv ~/.config/nvim ~/.config/nvim.bak 2>/dev/null || true
-
-git clone https://github.com/LazyVim/starter ~/.config/nvim
-rm -rf ~/.config/nvim/.git
-
-nvim
-```
-
-Apply Tokyo Night theme at `~/.config/nvim/lua/plugins/colorscheme.lua`:
-
-```lua
-return {
-  {
-    "folke/tokyonight.nvim",
-    opts = { style = "night" },
-  },
-  {
-    "LazyVim/LazyVim",
-    opts = { colorscheme = "tokyonight-night" },
-  },
-}
-```
-
----
-
-### 10. VS Code
-
-```bash
-brew install --cask visual-studio-code
-
-code --install-extension rust-lang.rust-analyzer
-code --install-extension charliermarsh.ruff
-code --install-extension esbenp.prettier-vscode
-code --install-extension vscodevim.vim
-code --install-extension PKief.material-icon-theme
-code --install-extension enkia.tokyo-night
-```
-
----
-
-### 11. Font — JetBrains Mono Nerd Font
-
-```bash
-brew install --cask font-jetbrains-mono-nerd-font
-```
-
-After installing, configure your terminal (iTerm2, Ghostty, or Terminal.app) to use `JetBrainsMono Nerd Font`.
-
----
-
-### 12. Stack verification
-
-```bash
-brew doctor
-mise --version
-starship --version
-nvim --version
-lazygit --version
-eza --version
-bat --version
-rg --version
-fd --version
-delta --version
-topgrade --version
-echo $SHELL
-```
-
----
-
-### macOS vs Arch Linux (WSL2) differences
-
-| Item | Arch (WSL2) | macOS (ARM) |
-|---|---|---|
-| Package manager | `pacman` | `brew` |
-| Clipboard | `wl-clipboard` via WSLg | `pbcopy`/`pbpaste` native |
-| Default shell | Set via `chsh` | ZSH already default |
-| Systemd / wsl.conf | Required | Not applicable |
-| Nerd Font | Manual install | `brew install --cask` |
-| VS Code | WSL symlink | `brew install --cask` |
-| `yazi` deps | `pacman -S ffmpegthumbnailer...` | `brew install ffmpeg sevenzip...` |
-| `topgrade` | Via `cargo` | Via `brew` |
-| `cargo-update` | Via `cargo` | Via `brew` |
-
----
-
-## Maintenance
-
-```bash
-topgrade              # updates everything: pacman/brew + cargo + mise + ZSH plugins
-topgrade --only cargo
-topgrade --only mise
-```
-
----
-
-## VS Code — Extensions
-
-```
-rust-lang.rust-analyzer
-charliermarsh.ruff
-esbenp.prettier-vscode
-vscodevim.vim
-PKief.material-icon-theme
-enkia.tokyo-night
-```
-
----
-
-## Keybindings (VSCodeVim)
-
-| Binding | Action |
-|---|---|
-| `<leader>e` | Toggle sidebar |
-| `<leader>ff` | Fuzzy find file |
-| `<leader>fg` | Find in files |
-| `<leader>fr` | Recent files |
-| `<leader>bd/bn/bp` | Close / next / previous buffer |
-| `gd` / `gD` | Go to / Peek definition |
-| `gr` / `gi` / `gh` | References / Implementation / Hover |
-| `<leader>ca/cr/cs` | Code action / Rename / Symbol |
-| `<leader>cd` | Problems panel |
-| `]d` / `[d` | Next / previous diagnostic |
-| `<leader>wv/ws` | Split vertical / horizontal |
-| `<leader>wh/l/k/j` | Navigate between splits |
-| `<leader>tt/tn` | Toggle / new terminal |
-| `<leader>mf` | Format document |
-| `<leader>gs` | Source Control view |
-| `<leader>h` | Clear search highlight |
