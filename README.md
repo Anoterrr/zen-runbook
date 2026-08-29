@@ -1,9 +1,3 @@
-[HIGH CONFIDENCE]
-
-Here is your setup guide translated into English, maintaining exact technical commands, paths, and logic while updating code block shell labels where applicable.
-
----
-
 # zen-dots — setup guide (Fedora WSL2 / Fedora KDE / macOS)
 
 No executable scripts. Follow the section for your specific machine.
