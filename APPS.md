@@ -8,6 +8,8 @@ Anything already covered in `README.md` (Git, Zed) is only cross-referenced here
 
 **Bruno over Insomnia:** both are API clients, so only one is listed. Bruno wins for this setup specifically — collections are plain `.bru` text files you can put straight in a git repo, no forced account or cloud sync, matches this repo's own Organic/Reproducibility pillars. Insomnia's collection format and Kong's cloud-account push don't.
 
+**Anki — web app only (ankiweb.net), no desktop install anywhere.** Review-only workflow, no deck creation/editing, no add-ons — the one thing AnkiWeb doesn't do is exactly the thing not needed here. If that ever changes (building decks, using add-ons like AnkiConnect or Image Occlusion), the desktop app is the only place those exist; AnkiWeb can't grow into them.
+
 ---
 
 ## Windows
@@ -20,11 +22,9 @@ winget install -e --id Bruno.Bruno
 winget install -e --id Bitwarden.Bitwarden
 winget install -e --id Brave.Brave
 winget install -e --id Notion.Notion
-winget install -e --id Anki.Anki
 winget install -e --id TheDocumentFoundation.LibreOffice
 winget install -e --id 7zip.7zip
 winget install -e --id Microsoft.PowerToys
-winget install -e --id Spotify.Spotify
 winget install -e --id VideoLAN.VLC
 winget install -e --id OBSProject.OBSStudio
 winget install -e --id Audacity.Audacity
@@ -43,7 +43,7 @@ Git and Zed on Windows are `README.md`'s WSL2 "install natively on Windows" step
 Sanity check:
 
 ```powershell
-$ids = "Microsoft.VisualStudioCode","Docker.DockerDesktop","DBeaver.DBeaver.Community","Bruno.Bruno","Bitwarden.Bitwarden","Brave.Brave","Notion.Notion","Anki.Anki","TheDocumentFoundation.LibreOffice","7zip.7zip","Microsoft.PowerToys","Spotify.Spotify","VideoLAN.VLC","OBSProject.OBSStudio","Audacity.Audacity","Discord.Discord","BlenderFoundation.Blender","Inkscape.Inkscape","KDE.Krita","Canva.Affinity"
+$ids = "Microsoft.VisualStudioCode","Docker.DockerDesktop","DBeaver.DBeaver.Community","Bruno.Bruno","Bitwarden.Bitwarden","Brave.Brave","Notion.Notion","TheDocumentFoundation.LibreOffice","7zip.7zip","Microsoft.PowerToys","VideoLAN.VLC","OBSProject.OBSStudio","Audacity.Audacity","Discord.Discord","BlenderFoundation.Blender","Inkscape.Inkscape","KDE.Krita","Canva.Affinity"
 foreach ($id in $ids) {
     if (winget list -e --id $id 2>$null | Select-String -SimpleMatch $id) {
         Write-Host "OK      $id"
@@ -58,12 +58,7 @@ foreach ($id in $ids) {
 
 ## Fedora KDE
 
-Flathub is on by default on the KDE spin, but this is a harmless no-op if it's already there:
-
-```bash
-flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-```
+Nothing here needs Flatpak at all — every app below has either an official repo/`.rpm`, or (Discord, Notion) is used as a web app instead.
 
 ### Native dnf packages
 
@@ -105,25 +100,47 @@ sudo usermod -aG docker $USER
 
 Log out and back in (or `newgrp docker`) for the group change to take effect.
 
-### Flatpak (no official dnf package for these)
+### Where these actually come from — checked against Flathub's own verification status, and against what `topgrade` actually updates
+
+Before defaulting everything without a dnf package to Flatpak, I checked each one's actual Flathub listing. None of DBeaver, Bitwarden, or Brave were marked **Verified** — Flathub's own page for each states it's "not verified by, affiliated with, or supported by" the vendor, meaning a third party controls the build, not the company that makes the app. That's a real gap against this repo's own Security pillar (vendor's own domain, not a third party).
+
+Beyond just "official," each pick below is also something `topgrade` (`README.md`) actually knows how to update on its own — the point is `topgrade` once and never think about any of these individually again:
+
+**Brave — official repo, `topgrade` updates it as a normal dnf package:**
 
 ```bash
-flatpak install -y flathub \
-  io.dbeaver.DBeaverCommunity \
-  com.bitwarden.desktop \
-  com.brave.Browser \
-  net.ankiweb.Anki \
-  com.spotify.Client \
-  com.discordapp.Discord
+sudo dnf config-manager addrepo --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+sudo dnf install -y brave-browser
 
 ```
+
+**Bitwarden & DBeaver — official Snap, not the unverified `.rpm`-free-for-all:** both publishers ship domain-verified Snaps (`dbeaver-corp` for DBeaver, `8bit Solutions LLC` for Bitwarden — checked directly on Snapcraft, both carry a real "Verified account" badge). Snap also self-updates automatically in the background by design, and `topgrade` has a native Snap step on top of that:
+
+```bash
+sudo dnf install -y snapd
+sudo ln -s /var/lib/snapd/snap /snap   # Fedora doesn't create this symlink by default
+# log out and back in here, then:
+sudo snap install dbeaver-ce --classic
+sudo snap install bitwarden
+
+```
+
+**fish won't see these commands without one more line.** snapd registers its `PATH` addition in `/etc/profile.d/*.sh` — fish doesn't source `.sh` files, so `dbeaver`/`bitwarden` silently won't be found otherwise (a known, longstanding snapd/fish incompatibility, not specific to this setup). Add it to `~/.config/fish/local.fish` (`README.md`'s escape hatch for exactly this kind of addition, so it survives re-running the fish config block):
+
+```fish
+echo 'fish_add_path -g /var/lib/snapd/snap/bin' >> ~/.config/fish/local.fish
+
+```
+
+Trade-off worth naming: Snap becomes a fourth package manager on the machine (dnf + mise + Snap, Flatpak no longer used at all) — worth it here specifically because it's the only path that's both vendor-verified and hands-off, not a default to reach for casually.
 
 ### No good Linux path
 
 - **Bruno** — no official Flatpak; grab the `.rpm`/AppImage from https://www.usebruno.com.
-- **Notion** — no official Linux client at all; unofficial Flatpaks exist, or use the web app.
+- **Discord** — no first-party path exists on Fedora at all (no `.rpm`, no repo, only `.deb`/`.tar.gz` upstream). Chosen fix: skip installing it — use the web app at https://discord.com/app instead. Trade-off: no global push-to-talk, no "playing X" rich presence, no system-tray integration.
+- **Notion** — no official Linux client at all. Chosen fix: same as Discord — use the web app rather than an unverified third-party Flatpak.
 - **Affinity** — no Linux build, no workaround worth using.
-- **PowerToys** — Windows-only; on KDE, KRunner (launcher) and KWin window rules already cover most of what it does natively.
 
 ### Steam & NVIDIA (RTX 5070 / Blackwell) — the one gaming exception in this file
 
@@ -207,11 +224,8 @@ A community script (`fedora-resolve` on GitHub) automates this plus GPU-specific
 Sanity check:
 
 ```bash
-for bin in p7zip libreoffice inkscape krita blender audacity vlc obs code docker steam gamemoderun mangohud vulkaninfo nvidia-smi; do
+for bin in p7zip libreoffice inkscape krita blender audacity vlc obs code docker steam gamemoderun mangohud vulkaninfo nvidia-smi brave-browser bitwarden dbeaver-ce; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
-done
-for id in io.dbeaver.DBeaverCommunity com.bitwarden.desktop com.brave.Browser net.ankiweb.Anki com.spotify.Client com.discordapp.Discord; do
-    flatpak info $id >/dev/null 2>&1 && echo "OK      $id" || echo "MISSING $id"
 done
 
 ```
@@ -222,7 +236,7 @@ done
 
 ```bash
 brew install --cask visual-studio-code docker-desktop dbeaver-community bruno \
-  bitwarden brave-browser notion anki libreoffice keka spotify vlc obs discord \
+  bitwarden brave-browser notion libreoffice keka vlc obs discord \
   blender inkscape krita affinity
 
 ```
@@ -231,13 +245,12 @@ brew install --cask visual-studio-code docker-desktop dbeaver-community bruno \
 
 ### No good macOS path
 
-- **PowerToys** — Windows-only; common substitutes are Raycast (launcher) and Rectangle (window management), but that's a new tool choice, not listed here unless you want it added.
 - **DaVinci Resolve** — no Homebrew cask (repeatedly requested, never added); download from https://www.blackmagicdesign.com/products/davinciresolve or the Mac App Store. Same free-version H.264/H.265 stripping as everywhere else — see the Fedora section above for the fix.
 
 Sanity check:
 
 ```bash
-for app in visual-studio-code docker-desktop dbeaver-community bruno bitwarden brave-browser notion anki libreoffice keka spotify vlc obs discord blender inkscape krita affinity; do
+for app in visual-studio-code docker-desktop dbeaver-community bruno bitwarden brave-browser notion anki libreoffice keka vlc obs discord blender inkscape krita affinity; do
     brew list --cask $app >/dev/null 2>&1 && echo "OK      $app" || echo "MISSING $app"
 done
 
