@@ -8,6 +8,8 @@ Anything already covered in `README.md` (Git, Zed) is only cross-referenced here
 
 **Bruno over Insomnia:** both are API clients, so only one is listed. Bruno wins for this setup specifically — collections are plain `.bru` text files you can put straight in a git repo, no forced account or cloud sync, matches this repo's own Organic/Reproducibility pillars. Insomnia's collection format and Kong's cloud-account push don't.
 
+**Obsidian over Notion:** local `.md` files instead of a proprietary cloud database — same Organic/Reproducibility win as Bruno's `.bru` above — and Obsidian ships an official **Verified** Flatpak on Fedora, unlike Notion which has no Linux client at all (was the web app before). Vault structure, daily flow, and the Syncthing setup for cross-device sync (phone/Fedora/Mac) all live in `OBSIDIAN.md`, not repeated here.
+
 **Anki — web app only (ankiweb.net), no desktop install anywhere.** Review-only workflow, no deck creation/editing, no add-ons — the one thing AnkiWeb doesn't do is exactly the thing not needed here. If that ever changes (building decks, using add-ons like AnkiConnect or Image Occlusion), the desktop app is the only place those exist; AnkiWeb can't grow into them.
 
 ---
@@ -21,7 +23,7 @@ winget install -e --id DBeaver.DBeaver.Community
 winget install -e --id Bruno.Bruno
 winget install -e --id Bitwarden.Bitwarden
 winget install -e --id Brave.Brave
-winget install -e --id Notion.Notion
+winget install -e --id Obsidian.Obsidian
 winget install -e --id TheDocumentFoundation.LibreOffice
 winget install -e --id 7zip.7zip
 winget install -e --id Microsoft.PowerToys
@@ -43,7 +45,7 @@ Git and Zed on Windows are `README.md`'s WSL2 "install natively on Windows" step
 Sanity check:
 
 ```powershell
-$ids = "Microsoft.VisualStudioCode","Docker.DockerDesktop","DBeaver.DBeaver.Community","Bruno.Bruno","Bitwarden.Bitwarden","Brave.Brave","Notion.Notion","TheDocumentFoundation.LibreOffice","7zip.7zip","Microsoft.PowerToys","VideoLAN.VLC","OBSProject.OBSStudio","Audacity.Audacity","Discord.Discord","BlenderFoundation.Blender","Inkscape.Inkscape","KDE.Krita","Canva.Affinity"
+$ids = "Microsoft.VisualStudioCode","Docker.DockerDesktop","DBeaver.DBeaver.Community","Bruno.Bruno","Bitwarden.Bitwarden","Brave.Brave","Obsidian.Obsidian","TheDocumentFoundation.LibreOffice","7zip.7zip","Microsoft.PowerToys","VideoLAN.VLC","OBSProject.OBSStudio","Audacity.Audacity","Discord.Discord","BlenderFoundation.Blender","Inkscape.Inkscape","KDE.Krita","Canva.Affinity"
 foreach ($id in $ids) {
     if (winget list -e --id $id 2>$null | Select-String -SimpleMatch $id) {
         Write-Host "OK      $id"
@@ -58,7 +60,7 @@ foreach ($id in $ids) {
 
 ## Fedora KDE
 
-Nothing here needs Flatpak at all — every app below has either an official repo/`.rpm`, or (Discord, Notion) is used as a web app instead.
+One exception needs Flatpak — Obsidian, verified below. Everything else has either an official repo/`.rpm`, or (Discord) is used as a web app instead.
 
 ### Native dnf packages
 
@@ -88,17 +90,43 @@ sudo dnf install -y code
 
 ```
 
-### Docker Engine (not "Docker Desktop" — Linux doesn't need the VM wrapper)
+### Podman (not Docker — native Fedora package, no third-party repo)
 
 ```bash
-sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
-sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo systemctl enable --now docker
-sudo usermod -aG docker $USER
+sudo dnf install -y podman podman-compose podman-docker
 
 ```
 
-Log out and back in (or `newgrp docker`) for the group change to take effect.
+`podman-docker` provides the `docker` command as a thin wrapper around Podman, so existing `docker`/`docker-compose` commands and scripts keep working without a rewrite. Runs rootless by default — no root daemon, no `usermod -aG docker` group grant, and no third-party repo/GPG import the way Docker's own `docker-ce.repo` needs.
+
+Sanity check:
+
+```bash
+for bin in podman podman-compose docker; do
+    command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
+done
+podman info --format '{{.Host.Security.Rootless}}'   # should print true
+
+```
+
+### Obsidian (replaces Notion)
+
+Obsidian ships an official **Verified** Flatpak — checked directly on its Flathub listing, the Obsidian team controls this build, same trust level as downloading from their own site:
+
+```bash
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install -y flathub md.obsidian.Obsidian
+
+```
+
+Vault structure, daily flow, and the Syncthing setup for cross-device sync (Fedora/Mac/Android) are in `OBSIDIAN.md`, not repeated here.
+
+Sanity check:
+
+```bash
+flatpak list | grep -q md.obsidian.Obsidian && echo "OK      Obsidian" || echo "MISSING Obsidian"
+
+```
 
 ### Where these actually come from — checked against Flathub's own verification status, and against what `topgrade` actually updates
 
@@ -133,13 +161,12 @@ echo 'fish_add_path -g /var/lib/snapd/snap/bin' >> ~/.config/fish/local.fish
 
 ```
 
-Trade-off worth naming: Snap becomes a fourth package manager on the machine (dnf + mise + Snap, Flatpak no longer used at all) — worth it here specifically because it's the only path that's both vendor-verified and hands-off, not a default to reach for casually.
+Trade-off worth naming: Snap becomes a fourth package manager on the machine (dnf + mise + Snap + Flatpak, the last one only for Obsidian) — worth it here specifically because it's the only path that's both vendor-verified and hands-off, not a default to reach for casually.
 
 ### No good Linux path
 
 - **Bruno** — no official Flatpak; grab the `.rpm`/AppImage from https://www.usebruno.com.
 - **Discord** — no first-party path exists on Fedora at all (no `.rpm`, no repo, only `.deb`/`.tar.gz` upstream). Chosen fix: skip installing it — use the web app at https://discord.com/app instead. Trade-off: no global push-to-talk, no "playing X" rich presence, no system-tray integration.
-- **Notion** — no official Linux client at all. Chosen fix: same as Discord — use the web app rather than an unverified third-party Flatpak.
 - **Affinity** — no Linux build, no workaround worth using.
 
 ### Steam & NVIDIA (RTX 5070 / Blackwell) — the one gaming exception in this file
@@ -224,7 +251,7 @@ A community script (`fedora-resolve` on GitHub) automates this plus GPU-specific
 Sanity check:
 
 ```bash
-for bin in p7zip libreoffice inkscape krita blender audacity vlc obs code docker steam gamemoderun mangohud vulkaninfo nvidia-smi brave-browser bitwarden dbeaver-ce; do
+for bin in p7zip libreoffice inkscape krita blender audacity vlc obs code podman steam gamemoderun mangohud vulkaninfo nvidia-smi brave-browser bitwarden dbeaver-ce; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
 done
 
@@ -236,12 +263,12 @@ done
 
 ```bash
 brew install --cask visual-studio-code docker-desktop dbeaver-community bruno \
-  bitwarden brave-browser notion libreoffice keka vlc obs discord \
+  bitwarden brave-browser obsidian libreoffice keka vlc obs discord \
   blender inkscape krita affinity
 
 ```
 
-`7-Zip` has no macOS build either — `keka` is the common equivalent.
+`7-Zip` has no macOS build either — `keka` is the common equivalent. Syncthing setup for this Mac (Obsidian vault sync) is in `OBSIDIAN.md`, not repeated here.
 
 ### No good macOS path
 
@@ -250,7 +277,7 @@ brew install --cask visual-studio-code docker-desktop dbeaver-community bruno \
 Sanity check:
 
 ```bash
-for app in visual-studio-code docker-desktop dbeaver-community bruno bitwarden brave-browser notion anki libreoffice keka vlc obs discord blender inkscape krita affinity; do
+for app in visual-studio-code docker-desktop dbeaver-community bruno bitwarden brave-browser obsidian anki libreoffice keka vlc obs discord blender inkscape krita affinity; do
     brew list --cask $app >/dev/null 2>&1 && echo "OK      $app" || echo "MISSING $app"
 done
 

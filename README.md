@@ -12,7 +12,7 @@ A personal environment baseline — go from a fresh Fedora/macOS install to a pr
 - **Organic** — native package manager first; nothing vendored or frozen without saying so.
 - **Reproducibility** — pinned wherever the ecosystem around a tool lags (Python, Java, LazyVim, fonts), left floating wherever it doesn't (Node, Rust, Go).
 - **Minimalism** — every tool has a stated reason to be here, not just "why not."
-- **Performance** — startup cost is a factor in every tool choice, not an afterthought.
+- **Performance** — startup cost is a factor in every tool choice, not an afterthought; measured, not assumed — see the sanity check at the end of the shell configuration section.
 - **Close to vanilla** — presets over deep customization; LazyVim is the one deliberate exception, scoped to a fallback role.
 - **Flexibility** — `~/.config/fish/local.fish` is the escape hatch for machine-specific tweaks that survive reruns.
 - **Scalability** — shared steps live in one place; platform sections hold only what's actually different.
@@ -603,6 +603,17 @@ test -f ~/.config/nvim/lua/plugins/colorscheme.lua && echo "OK      colorscheme.
 test -d ~/.local/share/nvim/lazy/LazyVim && echo "OK      LazyVim plugin installed" || echo "MISSING LazyVim plugin — reopen nvim to retry"
 
 ```
+
+### Performance — measure shell startup cost
+
+Every integration above (`mise activate`, `zoxide init`, `starship init`, `fzf --fish`) runs on every new shell. None of it is free — this is how to see what it's actually costing you, instead of assuming:
+
+```bash
+time fish -i -c exit
+
+```
+
+`real` is the number that matters — it's what you feel every time a new terminal opens. No hard budget is set here yet; run it after finishing setup and again after adding anything to `local.fish`, and treat a sudden jump as a signal to find out which integration caused it (comment one out at a time in `config.fish` and re-run to isolate it).
 
 ---
 
