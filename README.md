@@ -1,4 +1,4 @@
-# zen-dots — setup guide (Fedora WSL2 / Fedora KDE / macOS)
+# zen-runbook — setup guide (Fedora WSL2 / Fedora KDE / macOS)
 
 No executable scripts. Install `mise` first, then follow the section for your platform (Fedora WSL2 and Fedora KDE share one setup section in the middle), in order — later steps assume earlier ones are done.
 

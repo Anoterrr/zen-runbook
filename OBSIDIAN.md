@@ -1,4 +1,4 @@
-# zen-dots — Obsidian notes (Windows / Fedora KDE / macOS / Android)
+# zen-runbook — Obsidian notes (Windows / Fedora KDE / macOS / Android)
 
 Companion to `APPS.md` — Obsidian itself is installed there (winget on Windows, Flatpak on Fedora KDE, cask on macOS). This file covers how the vault is organized, the daily flow, general best practices, and the Syncthing setup that keeps it in sync across devices.
 

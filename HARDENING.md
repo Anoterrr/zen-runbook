@@ -1,4 +1,4 @@
-# zen-dots — internet & machine hardening (Windows / Fedora KDE / macOS)
+# zen-runbook — internet & machine hardening (Windows / Fedora KDE / macOS)
 
 Named `HARDENING.md`, not `SECURITY.md` — GitHub treats a root `SECURITY.md` as this repo's vulnerability-disclosure policy and surfaces it in its own tab, which isn't what this is.
 

@@ -1,4 +1,4 @@
-# zen-dots — everyday apps (Windows / Fedora KDE / macOS)
+# zen-runbook — everyday apps (Windows / Fedora KDE / macOS)
 
 A reference + install commands for the apps actually in daily use, one command per platform wherever a package manager covers it. Companion to `README.md`, not bound by its pillars — this is a factual inventory, not a minimal/vanilla toolkit. WSL2 users: GUI apps run on the Windows host, same as `README.md`'s WSL2 sections — use the Windows list below.
 
