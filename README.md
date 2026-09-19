@@ -234,7 +234,25 @@ command -v wsl-notify-send.exe >/dev/null \
 
 ### Zed, Ghostty, Fonts — installed on host Windows side
 
-Ghostty does not support Windows directly — WSL relies on Windows Terminal. Zed: install natively on Windows and connect to the Fedora WSL instance as a remote target (identical to the VS Code Remote-WSL pattern). Fonts must also be installed directly on Windows.
+Ghostty does not support Windows directly — WSL relies on Windows Terminal. Zed needs installing natively on Windows, then connects to the Fedora WSL instance as a remote target (identical to the VS Code Remote-WSL pattern) — `git` isn't part of this step, it's already installed inside Fedora WSL2 in the shared setup above, which is where all the actual dev work happens:
+
+```powershell
+winget install -e --id ZedIndustries.Zed
+
+```
+
+Fonts must also be installed directly on Windows — same JetBrainsMono Nerd Font as the Fedora KDE section below, no separate pin to track since it's the same release.
+
+Sanity check:
+
+```powershell
+if (winget list -e --id ZedIndustries.Zed 2>$null | Select-String -SimpleMatch ZedIndustries.Zed) {
+    Write-Host "OK      Zed"
+} else {
+    Write-Host "MISSING Zed"
+}
+
+```
 
 ---
 

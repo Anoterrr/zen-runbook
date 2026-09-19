@@ -38,7 +38,7 @@ winget install -e --id Canva.Affinity
 
 ```
 
-Git and Zed on Windows are `README.md`'s WSL2 "install natively on Windows" step — `winget install -e --id Git.Git` / `winget install -e --id ZedIndustries.Zed` are the exact commands for it.
+Zed on Windows is `README.md`'s WSL2 "installed on host Windows side" step — `winget install -e --id ZedIndustries.Zed` is the exact command, already there. `git` isn't part of that list on purpose: it's installed inside Fedora WSL2 itself (`README.md`'s shared Fedora setup, step 1), not natively on Windows — all the actual dev work happens in the WSL2 filesystem, so a second git install on the Windows side would just be an unused duplicate.
 
 **DaVinci Resolve** — no winget package exists; Blackmagic gates the download behind a free account at https://www.blackmagicdesign.com/products/davinciresolve. The free edition strips H.264/H.265 import *and* export on every platform (patent licensing, not a bug) — if your footage is H.264 (most cameras/phones), either transcode it first (`ffmpeg` to DNxHR/ProRes-compatible/FFV1) or buy the one-time Studio license, which removes the restriction.
 
