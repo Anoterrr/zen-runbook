@@ -243,13 +243,40 @@ done
 ## macOS
 
 ```bash
-brew install --cask visual-studio-code docker-desktop dbeaver-community bruno \
+brew install --cask visual-studio-code dbeaver-community bruno \
   bitwarden brave-browser obsidian libreoffice keka vlc obs discord \
   blender inkscape krita affinity
 
 ```
 
 `7-Zip` has no macOS build either — `keka` is the common equivalent. Syncthing setup for this Mac (Obsidian vault sync) is in `OBSIDIAN.md`, not repeated here.
+
+### Podman (replaces Docker Desktop — matches the Fedora sections, not a per-platform exception)
+
+`podman` on macOS is the Homebrew formula, not a cask — same "background tool, not a GUI app" reasoning as Syncthing (`OBSIDIAN.md`). Containers need a Linux kernel, which macOS doesn't have, so — unlike Fedora, where Podman runs natively — it needs a small Linux VM underneath; `podman machine` manages that VM for you, it's not a separate manual step you're responsible for maintaining:
+
+```bash
+brew install podman podman-compose
+podman machine init
+podman machine start
+
+```
+
+`docker`/`docker-compose` scripts still won't resolve to anything — macOS has no `podman-docker` equivalent package the way Fedora does. Fedora's fix was a real wrapper binary, which works from cron jobs and other programs, not just your interactive shell; macOS doesn't have that option, so the closest equivalent is a shell alias, interactive-only, added alongside the other aliases in `README.md`'s `config.fish` block:
+
+```fish
+alias docker "podman"
+alias docker-compose "podman-compose"
+
+```
+
+Sanity check:
+
+```bash
+brew list podman >/dev/null 2>&1 && echo "OK      podman" || echo "MISSING podman"
+podman machine list | grep -q Currently && echo "OK      podman machine running" || echo "MISSING run 'podman machine start'"
+
+```
 
 ### No good macOS path
 
@@ -258,7 +285,7 @@ brew install --cask visual-studio-code docker-desktop dbeaver-community bruno \
 Sanity check:
 
 ```bash
-for app in visual-studio-code docker-desktop dbeaver-community bruno bitwarden brave-browser obsidian anki libreoffice keka vlc obs discord blender inkscape krita affinity; do
+for app in visual-studio-code dbeaver-community bruno bitwarden brave-browser obsidian anki libreoffice keka vlc obs discord blender inkscape krita affinity; do
     brew list --cask $app >/dev/null 2>&1 && echo "OK      $app" || echo "MISSING $app"
 done
 

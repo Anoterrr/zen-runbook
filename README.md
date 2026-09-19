@@ -486,6 +486,16 @@ if set -q WSL_DISTRO_NAME
     alias notify-send "wsl-notify-send.exe"
 end
 
+# --- docker compatibility: the podman-docker package already provides a real
+# `docker` binary on Fedora (works from cron/scripts too, not just here), so this
+# only fires on macOS, where no such wrapper package exists (see APPS.md) ---
+if not type -q docker; and type -q podman
+    alias docker "podman"
+end
+if not type -q docker-compose; and type -q podman-compose
+    alias docker-compose "podman-compose"
+end
+
 # --- cross-platform notifications: unified command name across all 3 machines ---
 function notify
     if type -q terminal-notifier
