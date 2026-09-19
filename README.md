@@ -40,6 +40,8 @@ Two points in this guide accept risk deliberately instead of avoiding it — nam
 | `ripgrep` (`rg`) | Fast recursive grep |
 | `fd` | Fast, friendly `find` |
 | `git-delta` | Syntax-highlighted git diff/merge pager |
+| `gh` | GitHub CLI — repo/PR/issue management from the terminal |
+| `podman` | Container runtime (rootless, Docker-compatible CLI) |
 | `neovim` + LazyVim | Terminal editor — non-GUI fallback only |
 | `lazygit` | Terminal UI for git |
 | `topgrade` | One command to upgrade everything (dnf/brew/mise/flatpak) |
@@ -162,7 +164,26 @@ done
 
 ```
 
-### 3. Default shell → fish
+### 3. Podman — container runtime (not Docker, no third-party repo)
+
+```bash
+sudo dnf install -y podman podman-compose podman-docker
+
+```
+
+`podman-docker` provides the `docker` command as a thin wrapper around Podman, so existing `docker`/`docker-compose` commands and scripts keep working without a rewrite. Runs rootless by default — no root daemon, no `usermod -aG docker` group grant, and no third-party repo/GPG import the way Docker's own `docker-ce.repo` needs. Applies the same on WSL2 as on Fedora KDE — this is a CLI tool, not a GUI app, so it doesn't fall under this guide's "GUI apps run on the Windows host" rule for WSL2.
+
+Sanity check:
+
+```bash
+for bin in podman podman-compose docker; do
+    command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
+done
+podman info --format '{{.Host.Security.Rootless}}'   # should print true
+
+```
+
+### 4. Default shell → fish
 
 ```bash
 grep -qxF /usr/bin/fish /etc/shells || echo /usr/bin/fish | sudo tee -a /etc/shells
@@ -640,7 +661,7 @@ time fish -i -c exit
 ## Final verification (all platforms)
 
 ```fish
-for bin in mise starship nvim lazygit eza bat rg fd delta fish fzf lnav topgrade zoxide jq btop kubectl k9s
+for bin in mise starship nvim lazygit eza bat rg fd delta fish fzf lnav topgrade zoxide jq btop kubectl k9s gh podman
     printf '%-10s ' $bin
     type -q $bin; and $bin --version 2>/dev/null | head -n1; or echo MISSING
 end

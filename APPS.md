@@ -90,25 +90,6 @@ sudo dnf install -y code
 
 ```
 
-### Podman (not Docker — native Fedora package, no third-party repo)
-
-```bash
-sudo dnf install -y podman podman-compose podman-docker
-
-```
-
-`podman-docker` provides the `docker` command as a thin wrapper around Podman, so existing `docker`/`docker-compose` commands and scripts keep working without a rewrite. Runs rootless by default — no root daemon, no `usermod -aG docker` group grant, and no third-party repo/GPG import the way Docker's own `docker-ce.repo` needs.
-
-Sanity check:
-
-```bash
-for bin in podman podman-compose docker; do
-    command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
-done
-podman info --format '{{.Host.Security.Rootless}}'   # should print true
-
-```
-
 ### Obsidian (replaces Notion)
 
 Obsidian ships an official **Verified** Flatpak — checked directly on its Flathub listing, the Obsidian team controls this build, same trust level as downloading from their own site:
@@ -251,7 +232,7 @@ A community script (`fedora-resolve` on GitHub) automates this plus GPU-specific
 Sanity check:
 
 ```bash
-for bin in p7zip libreoffice inkscape krita blender audacity vlc obs code podman steam gamemoderun mangohud vulkaninfo nvidia-smi brave-browser bitwarden dbeaver-ce; do
+for bin in p7zip libreoffice inkscape krita blender audacity vlc obs code steam gamemoderun mangohud vulkaninfo nvidia-smi brave-browser bitwarden dbeaver-ce; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
 done
 
