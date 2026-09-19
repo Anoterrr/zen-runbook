@@ -12,7 +12,7 @@ A personal environment baseline — go from a fresh Fedora/macOS install to a pr
 - **Organic** — native package manager first; nothing vendored or frozen without saying so.
 - **Reproducibility** — pinned wherever the ecosystem around a tool lags (Python, Java, LazyVim, fonts), left floating wherever it doesn't (Node, Rust, Go).
 - **Minimalism** — every tool has a stated reason to be here, not just "why not."
-- **Performance** — startup cost is a factor in every tool choice, not an afterthought; measured, not assumed — see the sanity check at the end of the shell configuration section.
+- **Performance** — startup cost is measured in aggregate, not assumed (see the sanity check at the end of the shell configuration section); no per-tool benchmark is tracked here, since that would need re-verifying on every version bump — a sudden jump in the aggregate number is the actual signal, and the fix is isolating the culprit then, not front-loading a benchmark nobody will keep current.
 - **Close to vanilla** — presets over deep customization; LazyVim is the one deliberate exception, scoped to a fallback role.
 - **Flexibility** — `~/.config/fish/local.fish` is the escape hatch for machine-specific tweaks that survive reruns.
 - **Scalability** — shared steps live in one place; platform sections hold only what's actually different.
@@ -686,12 +686,43 @@ time fish -i -c exit
 
 ---
 
-## Final verification (all platforms)
+## Full audit (all platforms) — run anytime, not just at setup
+
+Every sanity check above only gets run once, right after its own step — nothing re-checks any of it later. That's fine for catching a failed install on day one, but it means nothing here ever notices a machine drifting away from what this guide actually asks for (signing quietly never enabled, `pull.rebase` never set, `delta` installed but never wired up as the pager). This section is the fix: every state check from above, in one block, meant to be pasted again whenever something feels off — not just once.
+
+Binaries:
 
 ```fish
 for bin in mise starship nvim lazygit eza bat rg fd delta fish fzf lnav topgrade zoxide jq btop kubectl k9s gh podman
     printf '%-10s ' $bin
     type -q $bin; and $bin --version 2>/dev/null | head -n1; or echo MISSING
 end
+
+```
+
+Configuration state — the part a binary check alone can't see:
+
+```bash
+git config --global user.name >/dev/null && git config --global user.email >/dev/null \
+  && echo "OK      git identity" || echo "MISSING git identity"
+test "$(git config --global --get pull.rebase)" = true \
+  && echo "OK      pull.rebase" || echo "MISSING pull.rebase"
+test "$(git config --global --get commit.gpgsign)" = true \
+  && echo "OK      commit signing" || echo "MISSING commit signing"
+test "$(git config --global --get core.pager)" = delta \
+  && echo "OK      delta as git pager" || echo "MISSING delta as git pager"
+grep -q IdentitiesOnly ~/.ssh/config 2>/dev/null && grep -q HashKnownHosts ~/.ssh/config 2>/dev/null \
+  && echo "OK      ~/.ssh/config hardened" || echo "MISSING ~/.ssh/config hardening"
+gh auth status >/dev/null 2>&1 \
+  && echo "OK      gh authenticated" || echo "MISSING gh auth login"
+if command -v podman >/dev/null; then
+  test "$(podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null)" = true \
+    && echo "OK      podman rootless" || echo "MISMATCH podman not running rootless"
+fi
+test -s ~/.config/fish/config.fish && echo "OK      fish config.fish" || echo "MISSING fish config.fish"
+test -s ~/.config/starship.toml && echo "OK      starship.toml" || echo "MISSING starship.toml"
+test -s ~/.config/topgrade.toml && echo "OK      topgrade.toml" || echo "MISSING topgrade.toml"
+test -s ~/.lnav/formats/installed/custom-highlights.json && echo "OK      lnav highlights" || echo "MISSING lnav highlights"
+test -d ~/.local/share/nvim/lazy/LazyVim && echo "OK      LazyVim installed" || echo "MISSING LazyVim"
 
 ```

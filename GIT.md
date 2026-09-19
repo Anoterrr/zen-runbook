@@ -156,6 +156,8 @@ gh auth status                                   # confirm gh is authenticated a
 
 `gh repo delete` is the one command on this list that belongs in spirit next to the DANGER section above — it's not reversible from the CLI at all (GitHub Support can sometimes restore within a short window, but that's not something to plan around). Same rule applies: know exactly what's in the repo and whether anyone else has a clone before running it.
 
+It also needs a scope (`delete_repo`) that `gh auth login` doesn't grant by default — that's deliberate friction, not a bug, same reasoning as `HARDENING.md`'s extension-hygiene rule (fewer standing grants of access is strictly safer). `gh auth refresh -h github.com -s delete_repo` adds it, but there's no matching command to remove a scope once granted — it only ever adds. If it was requested for a one-off task, `gh auth logout` followed by a plain `gh auth login` (no `refresh`) is what actually sheds it, rather than leaving `delete_repo` sitting on the token indefinitely for no reason.
+
 ---
 
 ## `lazygit` — when the terminal UI is faster than typing
