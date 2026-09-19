@@ -122,7 +122,7 @@ Fedora lacks a single meta-package — build tools are packaged as a DNF group. 
 ```bash
 sudo dnf upgrade --refresh -y
 sudo dnf group install -y development-tools
-sudo dnf install -y git curl wget unzip fish fzf man-db less openssh-clients \
+sudo dnf install -y git gh curl wget unzip fish fzf man-db less openssh-clients \
   wl-clipboard fontconfig libnotify
 
 ```
@@ -130,7 +130,7 @@ sudo dnf install -y git curl wget unzip fish fzf man-db less openssh-clients \
 Sanity check:
 
 ```bash
-for bin in git curl wget unzip fish fzf man ssh wl-copy fc-cache notify-send; do
+for bin in git gh curl wget unzip fish fzf man ssh wl-copy fc-cache notify-send; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
 done
 
@@ -271,7 +271,7 @@ Natively supported via `libnotify` installed in the shared setup above.
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
-brew install git curl fzf fish openssh eza bat ripgrep fd zoxide git-delta \
+brew install git gh curl fzf fish openssh eza bat ripgrep fd zoxide git-delta \
   starship lazygit neovim topgrade lnav terminal-notifier jq btop kubectl k9s
 brew install --cask zed ghostty font-jetbrains-mono-nerd-font
 
@@ -280,7 +280,7 @@ brew install --cask zed ghostty font-jetbrains-mono-nerd-font
 Sanity check:
 
 ```bash
-for bin in git curl fzf fish ssh eza bat rg fd zoxide delta starship lazygit nvim topgrade lnav terminal-notifier jq btop kubectl k9s; do
+for bin in git gh curl fzf fish ssh eza bat rg fd zoxide delta starship lazygit nvim topgrade lnav terminal-notifier jq btop kubectl k9s; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
 done
 for app in Zed Ghostty; do
@@ -405,6 +405,26 @@ test "$(git config --global --get commit.gpgsign)" = true \
   || echo "MISMATCH commit.gpgsign is not true"
 
 ```
+
+### GitHub CLI (`gh`) — repo/PR/issue management without leaving the terminal
+
+`gh` is already installed in your platform section above. It uses its own token, separate from the SSH key above — SSH is what `git push`/`git clone` authenticate with, `gh`'s token is what lets it talk to GitHub's API (`gh repo create`, `gh pr create`, `gh issue list`, ...):
+
+```bash
+gh auth login --hostname github.com --git-protocol ssh --web
+
+```
+
+Prints a one-time code and a `github.com/login/device` URL — open it, paste the code, approve in the browser. `--git-protocol ssh` tells `gh` to keep using the SSH key already set up above for any repo it clones, instead of switching you to HTTPS.
+
+Sanity check:
+
+```bash
+gh auth status
+
+```
+
+Full command reference and the safety rules for anything destructive (force-push, history rewrite, repo delete) are in `GIT.md`, not repeated here.
 
 ---
 
