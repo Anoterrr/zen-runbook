@@ -22,7 +22,15 @@ Five folders, all named in English, flat inside, with no subfolders by topic. Ca
 - **`0-Inbox`**: quick capture for raw material that still needs shaping (a plan, a guide, a reference, a link worth its own note). One place, no decision. Unlike `Journal`, this folder is supposed to empty out: everything here either becomes a proper note in `1-Notes` or goes to `2-Archive`. I keep it thin on purpose. The bar is "will I actually look at this again", not "capture everything". A nearly empty inbox means that filter is working.
 - **`1-Notes`**: all processed notes in one flat folder, with no subfolders by topic. Notes are organized by **tag** (see below). A note about learning SQL for work can have both `#work` and `#study` without me picking one folder. These are references: I write something down once so I don't have to think it through again, then look it up when it comes up. A note nobody opened for months isn't stale, it just hasn't been needed yet. A note can be doing its job with nothing in it checked off, and that's normal for the hobby and study notes here.
 - **`2-Archive`**: notes that don't matter anymore. I move things here now and then, not as part of a routine.
-- **`Attachments`**: every pasted or dragged-in file (image, PDF, anything) goes here. It's set in Settings → Files and links → "Default location for new attachments". Like `Journal`, the folder only works if the setting points to it. Otherwise Obsidian drops files next to whatever note you pasted them into.
+- **`Attachments`**: every pasted or dragged-in file (image, PDF, anything) goes here. The setting that points there is in the table below.
+
+Three settings make the folders work. Without them, Obsidian drops files in the vault root or next to whatever note is open:
+
+| Setting | Value |
+|---|---|
+| Files and links → Default location for new notes | In the folder specified below → `0-Inbox` |
+| Files and links → Default location for new attachments | In the folder specified below → `Attachments` |
+| Core plugins → Daily notes → New file location / Date format | `Journal` / `YYYY-MM-DD` |
 
 Obsidian handles thousands of files in one folder without slowing down, and I don't use the file explorer to find notes, so a flat folder isn't a performance problem. The real risk is tags. Once notes cover several areas (work, college, health, journal), a messy tag set brings back the same "which bucket does this go in" problem the flat structure was meant to avoid. The fixed tag list below is there to stop that early.
 
@@ -54,6 +62,8 @@ The weak spot: quick capture pushes the shaping work to later, so `0-Inbox` only
 
 - **Daily notes** (Settings → Core plugins): where capture starts, see above.
 - **Bases** (Settings → Core plugins): table, card and list views filtered by note properties. This replaces Notion's databases, and it ships with Obsidian, so there's nothing extra to trust. Try it before looking for a plugin.
+- **File recovery** (on by default): local snapshots of each note, per device. It's the first place to look after a bad edit.
+- **Sync: off.** That's the paid Obsidian Sync. Syncthing already does the job, and leaving it on only makes Obsidian offer it.
 
 Community plugins (Dataview, Obsidian Git, etc.) run JavaScript with no sandbox and full access to the vault. Core plugins cover what I need, so I skip them.
 
@@ -61,7 +71,7 @@ Community plugins (Dataview, Obsidian Git, etc.) run JavaScript with no sandbox 
 
 ## Syncthing: keeps the vault synced across devices
 
-Peer-to-peer: devices talk directly to each other, and nothing is stored on a third-party server. Install it on each platform below, then pair all devices once.
+Peer-to-peer: devices talk directly to each other, and nothing is stored on a third-party server. Install it on each platform below, then pair all devices once and set up the vault folder as described in "Vault folder settings".
 
 ### Windows
 
@@ -70,9 +80,9 @@ winget install -e --id Syncthing.Syncthing
 
 ```
 
-This installs only the official core binary: no tray icon, no autostart, just `syncthing.exe` and its web UI at `localhost:8384` while it runs. Start it by hand, or make it start with Windows through Task Scheduler (search "Task Scheduler" → Create Task → trigger "At log on" → action pointing at the installed `syncthing.exe`).
+This installs only the official core binary (publisher: The Syncthing Authors): no tray icon, no autostart, just `syncthing.exe` and its web UI at `localhost:8384` while it runs. To start it with Windows: Start menu → Task Scheduler → Create Task, trigger "At log on", action pointing at the installed `syncthing.exe` with the arguments `--no-console --no-browser`.
 
-**SyncTrayzor** is a third-party, open-source tray wrapper for Syncthing with a tray icon and autostart built in, and it's what most people use here. I don't install it by default because it doesn't come from the Syncthing project, the same rule as the extension advice in `HARDENING.md`. Worth it if starting Syncthing by hand gets annoying. If a pinned browser tab on `localhost:8384` is enough, skip it.
+**SyncTrayzor** is a third-party, open-source tray wrapper for Syncthing with a tray icon and autostart built in. The original project is archived. The maintained one is the GermanCoding fork (`winget install -e --id GermanCoding.SyncTrayzor`). Don't install `SyncTrayzor.SyncTrayzor`, that's the old, dead one. I don't install it by default because it doesn't come from the Syncthing project, the same rule as the extension advice in `HARDENING.md`. Worth it if starting Syncthing by hand gets annoying.
 
 ### Fedora KDE (after the move)
 
@@ -83,6 +93,8 @@ sudo dnf install -y syncthing
 systemctl --user enable --now syncthing.service
 
 ```
+
+The firewall step in `HARDENING.md` opens Syncthing's ports. Without it, devices still connect through Syncthing's relays, only slower.
 
 ### macOS
 
@@ -96,18 +108,60 @@ On macOS Syncthing is a Homebrew formula, not a cask, because it's a background 
 
 ### Android
 
-The official Syncthing app was removed from the Play Store. Install **Syncthing-Fork** (`com.github.catfriend1.syncthingandroid`) from the Play Store instead. It's a community-maintained, open-source fork that uses the same protocol and works with official Syncthing on the other devices. You're trusting the fork's maintainer instead of the Syncthing Foundation, but you don't have to sideload or allow unknown sources. Pairing works the same as below.
+The official Syncthing Android app was discontinued in December 2024. The maintained replacement is **Syncthing-Fork**, open source, same protocol, and it works with official Syncthing on the other devices. It's now maintained at `researchxxl/syncthing-android` (the old Catfriend1 repo redirects there).
+
+Where I get it matters:
+
+- **F-Droid** (`com.github.catfriend1.syncthingfork`): built from the maintained repo's source. The F-Droid app has to be allowed to install apps once, and F-Droid updates it after that. This is the one I use.
+- **Play Store** (`com.github.catfriend1.syncthingandroid`): published from a separate account (`nel0x`). The fork's maintainer said in its issue tracker (issues #243 and #351, 2026) that the Play builds are made privately on that person's computer, not from the repo's CI, and lag behind or break (the August 2026 Play update caused "Failed to create configuration" errors). Avoid it.
+
+The two have different package IDs, so switching from the Play version is a fresh install. The phone gets a new device ID and has to be paired again. Pairing works the same as below.
 
 ### Pairing
 
-Open http://localhost:8384 on Fedora or the Mac (Syncthing's web UI, local only by default) to get that machine's device ID. Do the same on the phone. Add each device's ID on the others and approve on both sides. Once all three trust each other, share the Obsidian vault folder.
+Open http://localhost:8384 on each computer (Syncthing's web UI, local only by default) to get its device ID, and check the phone app for its ID. Add each device's ID on the others and approve on both sides. Once all of them trust each other, share the Obsidian vault folder.
 
-Sanity check (Fedora/Mac):
+### Vault folder settings (on every device)
+
+In the web UI (or the phone app), edit the vault folder:
+
+- **Ignore Patterns**: add the two files Obsidian rewrites every time I switch notes or resize a pane. If they sync, every device fights over them and Syncthing creates conflict copies. They only hold window layout, so each device keeps its own:
+
+  ```
+  .obsidian/workspace.json
+  .obsidian/workspace-mobile.json
+  ```
+
+  Ignore patterns don't sync between devices. Add them on each one.
+- **File Versioning**: "Staggered", at least on the desktop. Syncthing isn't a backup: a deleted or broken note gets deleted or broken on every device. With versioning, the old copies stay in `.stversions` inside the vault.
+
+**Conflicts.** When two devices change the same file before syncing, Syncthing keeps both and names one `*.sync-conflict-*`. They don't go away by themselves. Every now and then:
+
+```bash
+fd -H sync-conflict ~/path/to/vault   # compare each one with the original, keep what's right, delete the copy
+
+```
+
+Sanity check (Fedora):
 
 ```bash
 command -v syncthing >/dev/null && echo "OK      syncthing" || echo "MISSING syncthing"
-systemctl --user is-active syncthing.service 2>/dev/null | grep -q active \
-  && echo "OK      syncthing.service" \
-  || echo "PENDING syncthing.service not running (macOS: check 'brew services list' instead)"
+systemctl --user is-active --quiet syncthing.service \
+  && echo "OK      syncthing.service" || echo "MISSING syncthing.service not running"
+
+```
+
+Sanity check (macOS):
+
+```bash
+brew services list | grep -q "^syncthing.*started" \
+  && echo "OK      syncthing service" || echo "MISSING run 'brew services start syncthing'"
+
+```
+
+Sanity check (Windows, PowerShell):
+
+```powershell
+if (Get-Process syncthing -ErrorAction SilentlyContinue) { Write-Host "OK      syncthing running" } else { Write-Host "MISSING syncthing not running" }
 
 ```

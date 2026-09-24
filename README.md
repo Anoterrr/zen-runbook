@@ -1,6 +1,6 @@
 # zen-runbook - setup guide (Fedora WSL2 / Fedora KDE / macOS)
 
-No executable scripts. Install `mise` first, then follow the section for your platform in order. Fedora WSL2 and Fedora KDE share one setup section in the middle. Later steps assume the earlier ones are done.
+No executable scripts. On WSL2, create the Fedora instance first. Then install `mise`, then follow the section for your platform in order. Fedora WSL2 and Fedora KDE share one setup section in the middle. Later steps assume the earlier ones are done.
 
 ## Purpose
 
@@ -12,19 +12,33 @@ My personal environment baseline. It takes a fresh Fedora or macOS install to a 
 - **Organic**: native package manager first. Anything vendored or frozen says so.
 - **Reproducibility**: pin a version when the ecosystem around the tool lags (Python, Java, fonts). Let it float when it doesn't (Node, Rust, Go).
 - **Minimalism**: every tool has a stated reason to be here.
-- **Performance**: shell startup time gets measured as one number (see the end of the shell configuration section). I don't benchmark each tool, because that would need redoing on every version bump. If the total jumps, that's when I go find the culprit.
+- **Performance**: shell startup time gets measured as one number and saved as a baseline (see the end of the shell configuration section). I don't benchmark each tool, because that would need redoing on every version bump. If the total jumps past the baseline, that's when I go find the culprit.
 - **Close to vanilla**: presets over deep customization. Neovim and tmux run on their stock defaults, with no distribution or framework on top.
-- **Flexibility**: `~/.zshrc.local` holds machine-specific tweaks and survives reruns.
-- **Scalability**: shared steps live in one place. Platform sections only hold what differs.
+- **Flexibility**: every block can be run again without breaking or duplicating anything. `~/.zshrc.local` holds machine-specific tweaks and is never touched.
+- **Scalability**: shared steps live in one place. Platform sections only hold what differs. CLI tools are installed or checked in three places only: the `dnf` line, the `brew` line and the Full audit. The Tool index just describes them.
 - **Free wins**: if something costs nothing (reusing a tool already installed, turning off default noise), take it.
-- **Security**: every download comes from the vendor's own domain over HTTPS. A version pin also works as an integrity check, since a git commit hash is content-addressed. Where some trust has to be taken on faith (like installing a repo's signing key before it can verify anything), the guide says so.
+- **Security**: software comes from its vendor, or from the OS's own package manager. When a third party builds or hosts something, the guide names who, and only uses it where the vendor has no channel of its own, or where the vendor's only channel is one more `curl | sh` outside any package manager. Anything downloaded by hand is pinned to a version and checked against the vendor's published SHA-256. The full list is in "Sources and owners".
 
-## Trust boundaries
+## Sources and owners
 
-Two steps in this guide accept a known risk:
+Where every download comes from, and who controls it.
+
+| Source | Owner | Vendor or third party | Used for |
+|---|---|---|---|
+| Fedora repos (`dnf`) | Fedora Project | OS package manager, builds from upstream source and signs | Most CLI tools on Fedora |
+| Homebrew | Homebrew maintainers | OS package manager on macOS. Formulae are built from upstream source; casks download the vendor's own binary | CLI tools (formulae), Zed, Ghostty and the font (casks) on macOS |
+| `mise.run` | jdx (mise's author) | Vendor | mise itself |
+| mise, `aqua` backend | Each tool's own GitHub releases (starship/starship, jesseduffield/lazygit, topgrade-rs/topgrade), checksums from the aqua registry | Vendor | starship, lazygit, topgrade on Fedora |
+| mise runtimes | nodejs.org, rust-lang, go.dev, Adoptium (Temurin) | Vendor | node, rust, go, java |
+| mise Python | Astral (`python-build-standalone`) | **Third party**: CPython builds made by Astral, not python.org | python |
+| ryanoasis/nerd-fonts releases | Nerd Fonts project | Vendor, pinned version + SHA-256 | JetBrainsMono Nerd Font on Fedora KDE and Windows |
+| Terra | Fyra Labs | **Third party**: repackages vendor releases | Ghostty and Zed on Fedora KDE, DBeaver (`APPS.md`). Ghostty publishes no Linux binary and its docs point to Terra or COPR. Zed does have its own `zed.dev/install.sh`, but that's another `curl \| sh` outside dnf, so Zed comes from Terra and `topgrade` updates it with everything else |
+| winget | Microsoft's community manifest repo, pointing at the vendor's installer | Vendor binary, third-party manifest | Zed on Windows |
+
+Two steps accept a known risk:
 
 - **`curl | sh` installers** (`mise`, Homebrew). Each is the project's official install command, and neither publishes a checksum to verify against. I accept it because both are widely audited, served over HTTPS from their own domains, and this is how most of the ecosystem bootstraps.
-- **Terra repo** (Fedora KDE only). The first `terra-release` install uses `--nogpgcheck`, as Terra's docs say, because that package is the one that installs the GPG key used to verify everything else. Terra is a third-party repo run by Fyra Labs, so it's limited to the packages this repo needs from it (see the Ghostty and Zed step). The rest of its ~3,000 packages stay invisible to dnf, including a few that share names with Fedora packages and could otherwise replace them on upgrade.
+- **Terra repo** (Fedora KDE only). The first `terra-release` install uses `--nogpgcheck`, as Terra's docs say, because that package is the one that installs the GPG key used to verify everything else. Terra is limited to the packages this repo needs from it (see the Ghostty and Zed step). The rest of its ~3,000 packages stay invisible to dnf, including a few that share names with Fedora packages and could otherwise replace them on upgrade.
 
 ## Tool index
 
@@ -56,14 +70,15 @@ Two steps in this guide accept a known risk:
 | `btop` | Resource monitor |
 | `kubectl` | Kubernetes CLI |
 | `k9s` | Terminal UI for Kubernetes clusters |
-| `wl-clipboard` / `terminal-notifier` / `wsl-notify-send` | Clipboard and desktop notifications, one per platform |
+| `wl-clipboard` | Clipboard on Fedora (Wayland) |
+| `libnotify` / `terminal-notifier` | Desktop notifications on Fedora KDE / macOS. None on WSL2 |
 | `uv` | Python packages and venvs, per project |
 | `Zed` | Main GUI editor |
 | `Ghostty` | Main terminal (Windows Terminal on WSL) |
 
 ## Installation priority: native package manager first, mise as fallback
 
-Try `dnf` (Fedora) or `brew` (macOS) first. `mise` only installs what the official repos don't have. On Fedora that's `starship`, `lazygit` and `topgrade`. `eza` and `lnav` have come and gone from Fedora's repos, so the guide tries `dnf` and falls back to `mise` if it fails.
+Try `dnf` (Fedora) or `brew` (macOS) first. `mise` only installs what the official repos don't have. On Fedora that's `starship`, `lazygit` and `topgrade`.
 
 On macOS, `brew` has all of these. There, `mise` only handles language runtimes (`node`/`python`/`rust`/`go`/`java`).
 
@@ -71,31 +86,36 @@ Two things can't come from mise at all. The **login shell** (`zsh`) needs a real
 
 ---
 
-## mise: install first
+## Fedora WSL2: create the instance first
 
-Every section below uses `mise` as a fallback, so it goes in before anything else:
+Skip this on Fedora KDE and macOS. On WSL2 everything below runs inside Fedora, so Fedora has to exist first:
 
-```bash
-curl https://mise.run | sh
-mkdir -p ~/.config/mise
-echo '[tools]
-node = "lts"
-python = "3.13.15"
-rust = "latest"
-go = "latest"
-java = "temurin-17"
-uv = "latest"
-
-[settings]
-experimental = true
-python.uv_venv_auto = "create|source"' > ~/.config/mise/config.toml
-~/.local/bin/mise install
+```powershell
+wsl --list --online
+wsl --install FedoraLinux-44
 
 ```
 
-`python` and `java` are pinned because PySpark and JVM build tooling take a while to support new releases. Bump them by hand once your usual stacks work on the new version. `node`, `rust` and `go` track `lts`/`latest` since their ecosystems keep up, and per-project pins (e.g. via `uv` for Python) override this global default anyway.
+Open the new Fedora shell, install mise (next section), then do the shared Fedora setup, and come back to "Fedora WSL2: after the shared setup" when it's done.
 
-If that exact patch has no prebuilt binary for your platform yet (they can lag a release by a few days), drop to the previous patch (`mise ls-remote python | grep '^3.13'` lists what's available), or build from source with `mise settings set python.compile false` and run `mise install` again.
+---
+
+## mise: install first
+
+Every platform section uses `mise` as a fallback, so it goes in before them:
+
+```bash
+curl https://mise.run | sh
+~/.local/bin/mise use -g node@lts python@3.13.15 rust@latest go@latest java@temurin-17
+~/.local/bin/mise settings set python.uv_venv_auto "create|source"
+
+```
+
+`mise use -g` merges into `~/.config/mise/config.toml` instead of replacing it, so running the block again keeps anything added later (like the tools in the Fedora CLI step). To bump Python, run `mise use -g python@<new version>`.
+
+`python` and `java` are pinned because PySpark and JVM build tooling take a while to support new releases. Bump them by hand once your usual stacks work on the new version. `node`, `rust` and `go` track `lts`/`latest` since their ecosystems keep up, and per-project pins (e.g. via `uv` for Python) override this global default anyway. `uv` itself comes from `dnf`/`brew`, and `uv_venv_auto` makes mise create and activate a project's `.venv` when it finds a `uv.lock`.
+
+If that exact patch has no prebuilt binary for your platform yet (they can lag a release by a few days), drop to the previous patch (`mise ls-remote python | grep '^3.13'` lists what's available), or build from source with `mise settings set python.compile true` and run `mise install` again.
 
 Sanity check:
 
@@ -104,18 +124,6 @@ Sanity check:
 ~/.local/bin/mise ls || echo "MISMATCH one or more [tools] failed to install, see output above"
 
 ```
-
----
-
-## Fedora WSL2: prerequisite
-
-```powershell
-wsl --list --online
-wsl --install FedoraLinux-44
-
-```
-
-Then do the shared Fedora setup below, and come back to "Fedora WSL2: after the shared setup" when it's done.
 
 ---
 
@@ -130,15 +138,15 @@ Fedora has no single meta-package for build tools. They come as a DNF group. Use
 ```bash
 sudo dnf upgrade --refresh -y
 sudo dnf group install -y development-tools
-sudo dnf install -y git gh curl wget unzip zsh zsh-autosuggestions zsh-syntax-highlighting \
-  fzf man-db less openssh-clients wl-clipboard fontconfig libnotify
+sudo dnf install -y git gh curl unzip zsh zsh-autosuggestions zsh-syntax-highlighting \
+  fzf man-db less openssh-clients wl-clipboard
 
 ```
 
-Sanity check:
+Sanity check (the cross-platform tools are checked by the Full audit at the end):
 
 ```bash
-for bin in git gh curl wget unzip zsh fzf man ssh wl-copy fc-cache notify-send; do
+for bin in wl-copy; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
 done
 for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
@@ -150,11 +158,8 @@ done
 ### 2. CLI tools
 
 ```bash
-sudo dnf install -y bat ripgrep fd-find zoxide git-delta neovim tmux jq yq miller btop \
-  kubernetes-client k9s hyperfine pre-commit
-
-sudo dnf install -y eza || mise use -g eza
-sudo dnf install -y lnav || mise use -g lnav
+sudo dnf install -y bat ripgrep fd-find zoxide git-delta eza lnav neovim tmux jq yq miller \
+  btop kubernetes-client k9s hyperfine pre-commit uv
 
 mise use -g starship lazygit topgrade
 
@@ -168,17 +173,7 @@ A few notes on this list:
 - `pre-commit` is installed globally but does nothing in a repo until that repo has a `.pre-commit-config.yaml` and you run `pre-commit install`.
 - `miller` (binary `mlr`) reads CSV by header name. `mlr --icsv --opprint head -n 5 file.csv` is a quick look at an extract without opening a Python REPL.
 
-Sanity check:
-
-```bash
-for bin in bat rg fd zoxide delta nvim tmux eza lnav jq yq mlr btop kubectl k9s hyperfine pre-commit; do
-    command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
-done
-for bin in starship lazygit topgrade; do
-    test -x ~/.local/share/mise/shims/$bin && echo "OK      $bin" || echo "MISSING $bin"
-done
-
-```
+Sanity check: run the Binaries block of the Full audit at the end of this file. It already finds the mise tools, even before zsh is set up.
 
 ### 3. Podman: container runtime
 
@@ -231,26 +226,26 @@ getent passwd "$USER" | grep -q /usr/bin/zsh \
 
 ## Fedora WSL2: after the shared setup
 
-### Notifications (Windows Toast integration)
+### Windows interop: restore it after Podman
 
-The zsh config below already aliases `notify-send` to `wsl-notify-send.exe` when `$WSL_DISTRO_NAME` is set. All this step does is get the binary:
+Podman pulls in `qemu-user-static` (through `containers-common-extra`), which registers binfmt handlers for other CPU architectures. On WSL2 that knocks out `WSLInterop`, the handler that lets Linux run Windows `.exe` files, so `powershell.exe`, `cmd.exe` and `winget.exe` stop working with "cannot execute binary file". These lines put it back now and on every boot, since `systemd-binfmt` reads `/etc/binfmt.d/`:
 
 ```bash
-mkdir -p ~/.local/bin
-# download wsl-notify-send.exe: https://github.com/stuartleeks/wsl-notify-send/releases
+echo ':WSLInterop:M::MZ::/init:PF' | sudo tee /etc/binfmt.d/WSLInterop.conf > /dev/null
+test -e /proc/sys/fs/binfmt_misc/WSLInterop \
+  || echo ':WSLInterop:M::MZ::/init:PF' | sudo tee /proc/sys/fs/binfmt_misc/register > /dev/null
 
 ```
 
 Sanity check:
 
 ```bash
-command -v wsl-notify-send.exe >/dev/null \
-  && echo "OK      wsl-notify-send.exe on PATH" \
-  || echo "MISSING place wsl-notify-send.exe in ~/.local/bin"
+test -e /proc/sys/fs/binfmt_misc/WSLInterop && cmd.exe /c ver > /dev/null 2>&1 \
+  && echo "OK      Windows interop" || echo "MISMATCH Windows interop broken"
 
 ```
 
-### Zed, Ghostty, Fonts: installed on host Windows side
+### Zed and fonts: installed on host Windows side
 
 Ghostty doesn't run on Windows, so WSL uses Windows Terminal. Zed gets installed on Windows and connects to the Fedora WSL instance as a remote target, the same way VS Code Remote-WSL works. `git` isn't installed here because it's already inside Fedora WSL2 from the shared setup, and that's where the dev work happens:
 
@@ -259,7 +254,28 @@ winget install -e --id ZedIndustries.Zed
 
 ```
 
-Fonts also go on Windows directly. Use the same JetBrainsMono Nerd Font release as the Fedora KDE section below.
+The font also goes on Windows, because Windows Terminal draws the text. Same release and hash as the Fedora KDE section, installed for the current user only (no admin):
+
+```powershell
+$zip = "$env:TEMP\JetBrainsMono.zip"
+$src = "$env:TEMP\JetBrainsMono"
+$dst = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
+Invoke-WebRequest "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.zip" -OutFile $zip
+if ((Get-FileHash $zip -Algorithm SHA256).Hash -eq "fab782a66f7d3019da64f6572db9fc5d3a4bcb19f9fa13e2d8a62e3693d6396e") {
+    Expand-Archive $zip $src -Force
+    New-Item -ItemType Directory -Force $dst | Out-Null
+    Get-ChildItem "$src\*.ttf" | ForEach-Object {
+        Copy-Item $_.FullName $dst -Force
+        New-ItemProperty "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" -Name "$($_.BaseName) (TrueType)" -Value "$dst\$($_.Name)" -Force | Out-Null
+    }
+} else {
+    Write-Host "MISMATCH hash, font not installed"
+}
+Remove-Item $zip, $src -Recurse -Force -ErrorAction SilentlyContinue
+
+```
+
+Copying the files and adding the registry entry is exactly what right-click → "Install" does for a single user. Then point Windows Terminal at it: Settings → the Fedora profile → Appearance → Font face → `JetBrainsMono Nerd Font`. Without this step starship's icons show up as boxes.
 
 Sanity check:
 
@@ -268,6 +284,16 @@ if (winget list -e --id ZedIndustries.Zed 2>$null | Select-String -SimpleMatch Z
     Write-Host "OK      Zed"
 } else {
     Write-Host "MISSING Zed"
+}
+if (Test-Path "$env:LOCALAPPDATA\Microsoft\Windows\Fonts\JetBrainsMonoNerdFont-Regular.ttf") {
+    Write-Host "OK      JetBrainsMono Nerd Font"
+} else {
+    Write-Host "MISSING JetBrainsMono Nerd Font"
+}
+if (Select-String -Quiet -SimpleMatch "JetBrainsMono Nerd Font" "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json") {
+    Write-Host "OK      Windows Terminal uses the font"
+} else {
+    Write-Host "MISSING set the font face in Windows Terminal"
 }
 
 ```
@@ -279,14 +305,17 @@ if (winget list -e --id ZedIndustries.Zed 2>$null | Select-String -SimpleMatch Z
 ### Fonts
 
 ```bash
+sudo dnf install -y fontconfig
 mkdir -p ~/.local/share/fonts
 curl -Lo /tmp/jbmono.zip "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.zip"
-unzip -oq /tmp/jbmono.zip -d ~/.local/share/fonts && rm -f /tmp/jbmono.zip
+echo "fab782a66f7d3019da64f6572db9fc5d3a4bcb19f9fa13e2d8a62e3693d6396e  /tmp/jbmono.zip" | sha256sum -c - \
+  && unzip -oq /tmp/jbmono.zip -d ~/.local/share/fonts
+rm -f /tmp/jbmono.zip
 fc-cache -f ~/.local/share/fonts
 
 ```
 
-Pinned to `v3.5.1` rather than `/latest/download/`. To upgrade, change the tag by hand (releases: https://github.com/ryanoasis/nerd-fonts/releases).
+Pinned to `v3.5.1` rather than `/latest/download/`, and checked against the hash in that release's `SHA-256.txt`. To upgrade, change the tag and take the new hash for `JetBrainsMono.zip` from the new release's `SHA-256.txt` (releases: https://github.com/ryanoasis/nerd-fonts/releases).
 
 Sanity check:
 
@@ -324,7 +353,19 @@ test "$(dnf repoquery -q --repo=terra --qf '%{name}\n' | grep -cvE '^(terra-rele
 
 ### Notifications
 
-Handled by `libnotify` from the shared setup.
+```bash
+sudo dnf install -y libnotify
+
+```
+
+Gives `notify-send`, which the `notify` function in `~/.zshrc` uses.
+
+Sanity check:
+
+```bash
+command -v notify-send >/dev/null && echo "OK      notify-send" || echo "MISSING notify-send"
+
+```
 
 ---
 
@@ -338,17 +379,15 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 
 brew install git gh curl fzf openssh eza bat ripgrep fd zoxide git-delta \
   starship lazygit neovim tmux topgrade lnav terminal-notifier jq yq miller btop kubectl k9s \
-  hyperfine pre-commit zsh-autosuggestions zsh-syntax-highlighting
+  hyperfine pre-commit uv zsh-autosuggestions zsh-syntax-highlighting
 brew install --cask zed ghostty font-jetbrains-mono-nerd-font
 
 ```
 
-Sanity check:
+Sanity check (the cross-platform tools are checked by the Full audit at the end):
 
 ```bash
-for bin in git gh curl fzf ssh eza bat rg fd zoxide delta starship lazygit nvim tmux topgrade lnav terminal-notifier jq yq mlr btop kubectl k9s hyperfine pre-commit; do
-    command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
-done
+command -v terminal-notifier >/dev/null && echo "OK      terminal-notifier" || echo "MISSING terminal-notifier"
 for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
     test -r /opt/homebrew/share/$plugin/$plugin.zsh && echo "OK      $plugin" || echo "MISSING $plugin"
 done
@@ -426,14 +465,14 @@ If you see "Hi \<username\>! You've successfully authenticated", it worked. GitH
 
 ```bash
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
-echo 'Host *
+grep -q IdentitiesOnly ~/.ssh/config 2>/dev/null || echo 'Host *
     IdentitiesOnly yes
     HashKnownHosts yes' >> ~/.ssh/config
 chmod 600 ~/.ssh/config
 
 ```
 
-`IdentitiesOnly` stops ssh from offering every key in `~/.ssh/` to every host. `HashKnownHosts` stops `~/.ssh/known_hosts` from listing the servers you've connected to in plain text.
+The `grep` guard skips the append if the block is already there, so running this again doesn't duplicate it. `IdentitiesOnly` stops ssh from offering every key in `~/.ssh/` to every host. `HashKnownHosts` stops `~/.ssh/known_hosts` from listing the servers you've connected to in plain text.
 
 Sanity check:
 
@@ -524,16 +563,13 @@ export PAGER="bat --plain"
 # --- fzf (Ctrl-T, Ctrl-R, Alt-C) --------------------------------------------
 (( $+commands[fzf] )) && source <(fzf --zsh)
 
-# --- WSL: notify-send has no native implementation, wsl-notify-send.exe fills the gap ---
-[[ -n $WSL_DISTRO_NAME ]] && alias notify-send='wsl-notify-send.exe'
-
 # --- docker compatibility: the podman-docker package already provides a real
 # `docker` binary on Fedora (works from cron/scripts too, not just here), so this
 # only fires on macOS, where no such wrapper package exists (see APPS.md) ---
 (( ! $+commands[docker] && $+commands[podman] )) && alias docker='podman'
 (( ! $+commands[docker-compose] && $+commands[podman-compose] )) && alias docker-compose='podman-compose'
 
-# --- cross-platform notifications: unified command name across all 3 machines ---
+# --- notifications: one command on Fedora KDE and macOS, does nothing on WSL2 ---
 notify() {
     if (( $+commands[terminal-notifier] )); then
         terminal-notifier -title "${1:-Shell}" -message "$2"
@@ -579,9 +615,11 @@ zsh -n ~/.zshrc && echo "OK      .zshrc is syntactically valid" || echo "MISMATC
 ### starship (preset)
 
 ```bash
-starship preset nerd-font-symbols -o ~/.config/starship.toml
+starship preset nerd-font-symbols --force -o ~/.config/starship.toml
 
 ```
+
+Without `--force`, starship refuses to write over an existing file, so running this block again would fail.
 
 Sanity check:
 
@@ -596,7 +634,8 @@ Skip this on WSL, where Ghostty doesn't run. The font was installed so starship'
 
 ```bash
 mkdir -p ~/.config/ghostty
-echo 'font-family = "JetBrainsMono Nerd Font"' >> ~/.config/ghostty/config
+grep -q "^font-family" ~/.config/ghostty/config 2>/dev/null \
+  || echo 'font-family = "JetBrainsMono Nerd Font"' >> ~/.config/ghostty/config
 
 ```
 
@@ -705,11 +744,15 @@ tmux new -d -s sanity && tmux has -t sanity && tmux kill-session -t sanity \
 Everything the config loads (`compinit`, `mise activate`, `zoxide init`, `starship init`, `fzf --zsh`, the two plugins) runs every time a shell opens. To see how long that takes:
 
 ```bash
+mkdir -p ~/.local/state
+test -f ~/.local/state/zsh-startup-baseline.md \
+  || hyperfine --warmup 3 --export-markdown ~/.local/state/zsh-startup-baseline.md 'zsh -i -c exit'
+cat ~/.local/state/zsh-startup-baseline.md
 hyperfine --warmup 3 'zsh -i -c exit'
 
 ```
 
-Look at the mean. That's the delay you get every time you open a terminal. `hyperfine` runs the command many times and reports the spread too, so one slow run (cold disk cache, busy CPU) won't look like a regression the way it would with a single `time`. I haven't set a target number. Run it after setup and again whenever you add something to `.zshrc.local`. If it jumps, comment out one integration at a time in `~/.zshrc` and re-run until you find which one did it.
+The first run saves a baseline, and every run after that prints it next to the new measurement. Look at the mean: it's the delay you get every time you open a terminal. `hyperfine` runs the command many times and reports the spread too, so one slow run (cold disk cache, busy CPU) won't look like a regression the way it would with a single `time`. Run it after setup and again whenever you add something to `.zshrc.local`. If the mean jumps well past the baseline, comment out one integration at a time in `~/.zshrc` and re-run until you find which one did it. After a change you decide to keep, delete the baseline file so the next run records a new one.
 
 ---
 
@@ -717,10 +760,13 @@ Look at the mean. That's the delay you get every time you open a terminal. `hype
 
 Each sanity check above runs once, right after its step. That catches a failed install on day one, but not a machine that drifts later: signing never turned on, `pull.rebase` never set, `delta` installed but not configured as the pager. This section collects every check in one place so you can paste it again whenever something seems off.
 
-Binaries:
+Binaries (this is the one list of cross-platform CLI tools, the per-step checks only cover what's platform-specific):
 
 ```bash
-for bin in mise starship nvim tmux lazygit eza bat rg fd delta zsh fzf lnav topgrade zoxide jq yq mlr btop kubectl k9s gh podman hyperfine pre-commit; do
+(
+PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+for bin in git gh curl unzip ssh man zsh fzf mise uv starship lazygit topgrade eza bat rg fd zoxide delta \
+           nvim tmux lnav jq yq mlr btop kubectl k9s podman hyperfine pre-commit; do
     printf '%-11s ' $bin
     if command -v $bin >/dev/null; then
         $bin --version 2>/dev/null | head -n1 | grep . || echo "installed (no --version flag)"
@@ -728,6 +774,7 @@ for bin in mise starship nvim tmux lazygit eza bat rg fd delta zsh fzf lnav topg
         echo MISSING
     fi
 done
+)
 
 ```
 

@@ -14,7 +14,7 @@ Most real compromises today come from phishing, a malicious browser extension, a
 - **Full-disk encryption**: BitLocker / FileVault / LUKS. See the per-OS sections below.
 - **Security updates install on their own**, everything else when I run `topgrade` (`README.md`). `topgrade` only runs when I remember to, so it can't be the only thing patching the machine. Per-OS setup below.
 - **Bitwarden** (`APPS.md`) for every password, unique per site, with 2FA on wherever it's offered. Leaked or reused passwords cause far more breaches than malware.
-- **`curl | sh`**: the Trust boundaries section in `README.md` lists the two pipe-to-shell installers this repo accepts (`mise`, Homebrew) and why. That doesn't extend to an install one-liner from some random blog post.
+- **`curl | sh`**: the "Sources and owners" section in `README.md` lists the two pipe-to-shell installers this repo accepts (`mise`, Homebrew) and why. That doesn't extend to an install one-liner from some random blog post.
 
 ---
 
