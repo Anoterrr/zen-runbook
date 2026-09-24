@@ -1,14 +1,14 @@
-# zen-runbook — git & GitHub CLI cheat sheet
+# zen-runbook - git & GitHub CLI cheat sheet
 
-Companion to `README.md`'s "Git identity, SSH key, and commit signing" section, which covers one-time setup. This file is the day-to-day reference: the commands actually used often enough to be worth memorizing, and — more importantly — a clear line between what's safe to run without thinking and what isn't.
+`README.md`'s "Git identity, SSH key, and commit signing" section covers the one-time setup. This file is for day-to-day use: the commands I run often, and which ones are safe to run without thinking.
 
-The organizing principle: **every command below is tagged safe, reversible, or DANGER.** Safe commands never lose work. Reversible ones can undo real damage if you know the trick (mostly `reflog`). DANGER commands can permanently destroy uncommitted or unpushed work — those get a stop-and-check step every time, no exceptions, even on your 500th commit.
+**Every command below is marked safe, reversible, or DANGER.** Safe commands never lose work. Reversible ones can be undone if you know how (usually with `reflog`). DANGER commands can permanently destroy uncommitted or unpushed work, so check first every time, no matter how many times you've run them before.
 
 ---
 
 ## Before anything that touches history or the working tree
 
-One habit prevents almost every git disaster: **run `git status` first.** If it says anything other than `nothing to commit, working tree clean`, stop and decide what to do with those changes (stage them, stash them, or confirm you don't care about them) before running a command from the DANGER section below.
+One habit prevents most git disasters: **run `git status` first.** If it shows anything other than `nothing to commit, working tree clean`, decide what to do with those changes (stage, stash, or confirm you don't need them) before running anything from the DANGER section.
 
 ```bash
 git status
@@ -17,7 +17,7 @@ git status
 
 ---
 
-## Everyday loop — all safe
+## Everyday loop: all safe
 
 ```bash
 git status                      # what's changed, what's staged
@@ -33,36 +33,36 @@ git push                        # send local commits to the remote
 
 ```
 
-None of these can lose committed work. `git add -A` is safe specifically because this repo has no `.gitignore` surprises to worry about — always worth a `git status` read before it anyway, to catch a file you didn't mean to add.
+None of these can lose committed work. `git add -A` stages everything, so read `git status` first to make sure you're not adding a file by accident.
 
-## Branching — safe
+## Branching: safe
 
 ```bash
 git branch                      # list local branches
 git switch -c my-branch         # create + switch to a new branch
 git switch main                 # switch back
 git merge my-branch             # merge my-branch into the current branch
-git branch -d my-branch         # delete, but ONLY if already merged — refuses otherwise
+git branch -d my-branch         # delete, but ONLY if already merged; refuses otherwise
 
 ```
 
-`git branch -d` (lowercase) is the safe delete — it's a no-op error, not data loss, if the branch has unmerged work. That guardrail is exactly why the DANGER section below has a separate, capital-`-D` entry.
+`git branch -d` (lowercase) refuses to delete a branch with unmerged work, so the worst it does is print an error. Force delete is the capital `-D`, which is in the DANGER section.
 
-## Undoing things — safe, in order of how much they touch
+## Undoing things: safe, in order of how much they touch
 
 ```bash
-git restore <file>              # discard UNSTAGED changes to one file — see DANGER note below
+git restore <file>              # discard UNSTAGED changes to one file, see DANGER note below
 git restore --staged <file>     # unstage a file, keep the edits in the working tree
 git commit --amend              # rewrite the last commit's message or add staged changes to it
-git revert <commit>             # create a NEW commit that undoes an old one — safe even after pushing
+git revert <commit>             # create a NEW commit that undoes an old one, safe even after pushing
 
 ```
 
-`git revert` is the one to reach for once something is already pushed — it never rewrites history, so it never conflicts with what a collaborator (or your other machine) already pulled. `git commit --amend` is only safe if that commit hasn't been pushed yet — amending a pushed commit is the same category of problem as the DANGER section's rebase entry, because it changes a commit's hash after the world has already seen it.
+Once something is pushed, use `git revert`. It adds a new commit and leaves history alone, so it doesn't conflict with what a collaborator or my other machine already pulled. Only use `git commit --amend` on commits you haven't pushed. Amending a pushed commit changes its hash, which is the same problem as rebasing pushed history (see DANGER).
 
-`git restore <file>` is listed as safe with a caveat: it's safe in the sense that it doesn't touch history, but it **does** permanently discard uncommitted edits to that file, no undo. Run `git diff <file>` first if there's any doubt about what you'd be throwing away.
+`git restore <file>` doesn't touch history, but it **does** throw away your uncommitted edits to that file for good. Run `git diff <file>` first if you're not sure what you'd lose.
 
-## Stashing — safe
+## Stashing: safe
 
 ```bash
 git stash                       # shelve uncommitted changes, working tree goes clean
@@ -71,33 +71,33 @@ git stash list                  # see everything currently shelved
 
 ```
 
-The move for "I need a clean working tree right now but I'm not ready to commit this."
+Use this when you need a clean working tree now but aren't ready to commit.
 
 ---
 
-## DANGER — confirm `git status` first, every time
+## DANGER: run `git status` first, every time
 
-Each of these can permanently discard work. The trigger for using one should always be a deliberate decision, never a reflex or a copy-pasted fix for an unrelated problem.
+Each of these can permanently discard work. Run one only when you mean to, never as a quick fix copied from somewhere for an unrelated problem.
 
 ```bash
 git reset --hard <commit>       # moves the branch AND discards all uncommitted changes, no undo
-git checkout -- <file>          # old syntax for restore, same danger — discards uncommitted edits
+git checkout -- <file>          # old syntax for restore, same danger; discards uncommitted edits
 git clean -fd                   # deletes untracked files AND untracked directories, no undo
 git push --force                # overwrites the remote branch, can erase a collaborator's or another machine's work
 git branch -D my-branch         # force-deletes a branch even with unmerged commits
 
 ```
 
-**If a force-push is genuinely necessary** (fixed a bad commit that's already pushed, and you're certain nobody else pulled it — true by default on a solo repo like this one, but confirm on anything shared), use `--force-with-lease` instead of bare `--force`:
+**If you really need to force-push** (you fixed a bad commit that's already pushed and you're sure nobody pulled it), use `--force-with-lease` instead of `--force`. On a solo repo like this one nobody else pulls, but check on anything shared:
 
 ```bash
 git push --force-with-lease
 
 ```
 
-It refuses the push if the remote has commits you haven't fetched yet — the one guardrail bare `--force` doesn't have, at essentially zero extra cost.
+It refuses to push if the remote has commits you haven't fetched. Plain `--force` doesn't check, and the lease costs nothing.
 
-**Rewriting already-pushed history** (interactive rebase, `filter-repo`, anything that changes old commit hashes) always needs a force-push to actually land, and always needs the same "is anyone else relying on the old history" check first. The worked example below is the exact command used to strip a `Co-Authored-By` trailer from two already-pushed commits in this repo's own history:
+**Rewriting pushed history** (interactive rebase, `filter-repo`, anything that changes old commit hashes) always needs a force-push, and always needs the same check: is anyone else relying on the old history? Example, rewording two commits that were already pushed:
 
 ```bash
 git rebase -i HEAD~5             # opens an editor; mark the commit(s) to fix as "reword"
@@ -106,13 +106,13 @@ git push --force-with-lease
 
 ```
 
-For anything heavier than a couple of commits (stripping a file from all of history, rewriting every author email), `git filter-repo` is the current standard tool — safer and faster than the older `git filter-branch`. Not installed by default here since it's a rare-enough operation; `pip install git-filter-repo` or `sudo dnf install git-filter-repo` when actually needed.
+For bigger jobs (removing a file from all of history, changing every author email), use `git filter-repo`. It's the current standard and is safer and faster than the old `git filter-branch`. I don't install it by default because I rarely need it: `pip install git-filter-repo` or `sudo dnf install git-filter-repo` when I do.
 
 ---
 
 ## If something already went wrong
 
-`git reflog` is the safety net underneath almost everything above — it's a local log of every place `HEAD` has pointed, including commits a `reset --hard` or a bad rebase just made unreachable. Unreachable commits aren't deleted immediately; they sit until git's garbage collector eventually sweeps them (weeks, by default), which is exactly the window that makes recovery possible.
+`git reflog` is the safety net. It's a local log of everywhere `HEAD` has pointed, including commits that a `reset --hard` or a bad rebase just made unreachable. Git doesn't delete unreachable commits right away. They stay until garbage collection removes them (weeks, by default), and that's your window to recover them.
 
 ```bash
 git reflog                      # find the commit hash from right before the mistake
@@ -120,21 +120,21 @@ git reset --hard <hash-from-reflog>   # move back to it
 
 ```
 
-This only works **locally** — it can't recover a branch that got force-pushed away on the remote unless another clone (this repo's other machine, for instance) still has the old commit and can push it back. That asymmetry is the real argument for `--force-with-lease` over `--force`: it's the check that prevents needing this recovery path in the first place.
+This only works **locally**. It can't bring back a branch that was force-pushed over on the remote, unless another clone (my other machine, for example) still has the old commits and can push them back. That's the main reason to use `--force-with-lease` over `--force`: it stops you from needing this in the first place.
 
 ---
 
-## GitHub CLI (`gh`) — the API side, no browser needed
+## GitHub CLI (`gh`)
 
-Setup and auth are in `README.md`. Below is what gets used day to day.
+Setup and login are in `README.md`. These are the commands I use day to day.
 
 ```bash
 gh repo create <name> --public                 # create a new empty repo on GitHub
 gh repo create <name> --private
-gh repo clone owner/repo                        # clone via gh instead of git clone — same result
+gh repo clone owner/repo                        # clone via gh instead of git clone, same result
 gh repo view owner/repo --web                    # open the repo in a browser
 gh repo rename <new-name>                        # rename the repo this directory is linked to
-gh repo delete owner/repo                        # DANGER — permanent, asks for confirmation once
+gh repo delete owner/repo                        # DANGER: permanent, asks for confirmation once
 
 ```
 
@@ -154,12 +154,12 @@ gh auth status                                   # confirm gh is authenticated a
 
 ```
 
-`gh repo delete` is the one command on this list that belongs in spirit next to the DANGER section above — it's not reversible from the CLI at all (GitHub Support can sometimes restore within a short window, but that's not something to plan around). Same rule applies: know exactly what's in the repo and whether anyone else has a clone before running it.
+Treat `gh repo delete` like the DANGER commands. It can't be undone from the CLI. GitHub Support can sometimes restore a repo within a short window, but don't count on it. Before running it, know what's in the repo and whether anyone else has a clone.
 
-It also needs a scope (`delete_repo`) that `gh auth login` doesn't grant by default — that's deliberate friction, not a bug, same reasoning as `HARDENING.md`'s extension-hygiene rule (fewer standing grants of access is strictly safer). `gh auth refresh -h github.com -s delete_repo` adds it, but there's no matching command to remove a scope once granted — it only ever adds. If it was requested for a one-off task, `gh auth logout` followed by a plain `gh auth login` (no `refresh`) is what actually sheds it, rather than leaving `delete_repo` sitting on the token indefinitely for no reason.
+It also needs the `delete_repo` scope, which `gh auth login` doesn't grant by default. That's on purpose: it's the same idea as the extension rule in `HARDENING.md`, where fewer standing permissions means less risk. `gh auth refresh -h github.com -s delete_repo` adds the scope, but there's no command to remove it. If you only needed it once, run `gh auth logout` and then a plain `gh auth login` (without `refresh`) so the token doesn't keep `delete_repo`.
 
 ---
 
-## `lazygit` — when the terminal UI is faster than typing
+## `lazygit`
 
-Already installed per `README.md`. Covers the everyday loop and branching sections above through a visual interface — staging individual hunks, browsing history, and resolving merge conflicts are all meaningfully faster there than composing the equivalent `git` flags by hand. Reach for the raw commands above when scripting or when precision matters (e.g. picking the exact commit for `rebase -i`); reach for `lazygit` for everything exploratory.
+Installed in `README.md`. It covers the everyday and branching commands above through a UI. Staging single hunks, browsing history and resolving merge conflicts are much faster there than typing the `git` flags by hand. I use the raw commands for scripts or when I need precision (like picking the exact commit for `rebase -i`), and `lazygit` for everything else.

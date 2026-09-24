@@ -1,73 +1,79 @@
-# zen-runbook — setup guide (Fedora WSL2 / Fedora KDE / macOS)
+# zen-runbook - setup guide (Fedora WSL2 / Fedora KDE / macOS)
 
-No executable scripts. Install `mise` first, then follow the section for your platform (Fedora WSL2 and Fedora KDE share one setup section in the middle), in order — later steps assume earlier ones are done.
+No executable scripts. Install `mise` first, then follow the section for your platform in order. Fedora WSL2 and Fedora KDE share one setup section in the middle. Later steps assume the earlier ones are done.
 
 ## Purpose
 
-A personal environment baseline — go from a fresh Fedora/macOS install to a productive shell in one read-through, with every choice traceable to a reason instead of copied defaults.
+My personal environment baseline. It takes a fresh Fedora or macOS install to a working shell in one read-through, and every choice in it has a reason written next to it.
 
 ## Pillars
 
-- **Simplicity** — no scripts, no hidden logic; every command is readable before you run it.
-- **Organic** — native package manager first; nothing vendored or frozen without saying so.
-- **Reproducibility** — pinned wherever the ecosystem around a tool lags (Python, Java, LazyVim, fonts), left floating wherever it doesn't (Node, Rust, Go).
-- **Minimalism** — every tool has a stated reason to be here, not just "why not."
-- **Performance** — startup cost is measured in aggregate, not assumed (see the sanity check at the end of the shell configuration section); no per-tool benchmark is tracked here, since that would need re-verifying on every version bump — a sudden jump in the aggregate number is the actual signal, and the fix is isolating the culprit then, not front-loading a benchmark nobody will keep current.
-- **Close to vanilla** — presets over deep customization; LazyVim is the one deliberate exception, scoped to a fallback role.
-- **Flexibility** — `~/.config/fish/local.fish` is the escape hatch for machine-specific tweaks that survive reruns.
-- **Scalability** — shared steps live in one place; platform sections hold only what's actually different.
-- **Convenience with no trade-off** — a free win (reusing a tool already installed, killing default noise) is always taken.
-- **Security** — every download comes from the vendor's own domain over HTTPS; a version pin doubles as an integrity anchor (a git commit hash is content-addressed); any unavoidable trust bootstrap (e.g. installing a repo's own signing key unsigned, the one time before it can verify itself) is named explicitly instead of glossed over.
+- **Simplicity**: no scripts, no hidden logic. You can read every command before you run it.
+- **Organic**: native package manager first. Anything vendored or frozen says so.
+- **Reproducibility**: pin a version when the ecosystem around the tool lags (Python, Java, fonts). Let it float when it doesn't (Node, Rust, Go).
+- **Minimalism**: every tool has a stated reason to be here.
+- **Performance**: shell startup time gets measured as one number (see the end of the shell configuration section). I don't benchmark each tool, because that would need redoing on every version bump. If the total jumps, that's when I go find the culprit.
+- **Close to vanilla**: presets over deep customization. Neovim and tmux run on their stock defaults, with no distribution or framework on top.
+- **Flexibility**: `~/.zshrc.local` holds machine-specific tweaks and survives reruns.
+- **Scalability**: shared steps live in one place. Platform sections only hold what differs.
+- **Free wins**: if something costs nothing (reusing a tool already installed, turning off default noise), take it.
+- **Security**: every download comes from the vendor's own domain over HTTPS. A version pin also works as an integrity check, since a git commit hash is content-addressed. Where some trust has to be taken on faith (like installing a repo's signing key before it can verify anything), the guide says so.
 
 ## Trust boundaries
 
-Two points in this guide accept risk deliberately instead of avoiding it — named here so it's a decision, not an oversight:
+Two steps in this guide accept a known risk:
 
-- **`curl | sh` installers** (`mise`, Homebrew) — each project's own official install command, with no published checksum to verify against. Accepted because both are widely-audited, HTTPS-only, first-party domains — this is the standard bootstrap pattern across the ecosystem, not something unique to this guide.
-- **Terra repo bootstrap** (`--nogpgcheck` on the initial `terra-release` install) — Terra's own documented command. The first package has to be installed unsigned because it's what installs the GPG key that verifies every package from that repo afterward.
+- **`curl | sh` installers** (`mise`, Homebrew). Each is the project's official install command, and neither publishes a checksum to verify against. I accept it because both are widely audited, served over HTTPS from their own domains, and this is how most of the ecosystem bootstraps.
+- **Terra repo** (Fedora KDE only). The first `terra-release` install uses `--nogpgcheck`, as Terra's docs say, because that package is the one that installs the GPG key used to verify everything else. Terra is a third-party repo run by Fyra Labs, so it's limited to the packages this repo needs from it (see the Ghostty and Zed step). The rest of its ~3,000 packages stay invisible to dnf, including a few that share names with Fedora packages and could otherwise replace them on upgrade.
 
 ## Tool index
 
 | Tool | Role |
 |---|---|
-| `mise` | Runtime + fallback package manager (only for what `dnf`/`brew` lack) |
-| `fish` | Login shell |
+| `mise` | Runtimes, plus fallback package manager for what `dnf`/`brew` lack |
+| `zsh` | Login shell. POSIX-compatible, same language as the bash/zsh people I work with |
+| `zsh-autosuggestions` / `zsh-syntax-highlighting` | Suggestions from history and live syntax coloring, which zsh lacks by default |
 | `starship` | Prompt |
 | `fzf` | Fuzzy finder (Ctrl-T / Ctrl-R / Alt-C) |
-| `zoxide` | Frecency-based `cd` |
+| `zoxide` | `cd` that remembers where you go |
 | `eza` | `ls` replacement |
-| `bat` | `cat`/pager replacement with syntax highlighting |
+| `bat` | `cat` and pager with syntax highlighting |
 | `ripgrep` (`rg`) | Fast recursive grep |
-| `fd` | Fast, friendly `find` |
-| `git-delta` | Syntax-highlighted git diff/merge pager |
-| `gh` | GitHub CLI — repo/PR/issue management from the terminal |
-| `podman` | Container runtime (rootless, Docker-compatible CLI) |
-| `neovim` + LazyVim | Terminal editor — non-GUI fallback only |
+| `fd` | Simpler, faster `find` |
+| `git-delta` | Syntax-highlighted pager for git diffs |
+| `gh` | GitHub CLI for repos, PRs and issues |
+| `podman` | Rootless container runtime with a Docker-compatible CLI |
+| `neovim` | Terminal editor, stock config, for when there's no GUI |
+| `tmux` | Terminal multiplexer. Sessions survive a closed window or a dropped SSH connection |
 | `lazygit` | Terminal UI for git |
 | `topgrade` | One command to upgrade everything (dnf/brew/mise/flatpak) |
-| `lnav` | Regex-highlighted log viewer (reading DAG/pipeline run logs) |
-| `jq` | JSON processor — pairs with API clients and pipeline output |
-| `btop` | Terminal resource monitor |
+| `lnav` | Log viewer with regex highlighting, for DAG and pipeline run logs |
+| `jq` | JSON processor for API responses and pipeline output |
+| `miller` (`mlr`) | awk/cut/sort by column name for CSV/TSV/JSON. Quick look at a data extract without opening Python |
+| `yq` | `jq` syntax for YAML (Kubernetes manifests, DAG and pipeline configs) |
+| `hyperfine` | Benchmarks a command over many runs. Used for the shell startup measurement |
+| `pre-commit` | Runs git hooks per repo (linters, formatters, secret scans) |
+| `btop` | Resource monitor |
 | `kubectl` | Kubernetes CLI |
 | `k9s` | Terminal UI for Kubernetes clusters |
-| `wl-clipboard` / `terminal-notifier` / `wsl-notify-send` | Clipboard + desktop notifications, per platform |
-| `uv` | Python package/venv manager, per-project |
-| `Zed` | Primary GUI editor |
-| `Ghostty` | Primary GUI terminal (not on WSL — Windows Terminal instead) |
+| `wl-clipboard` / `terminal-notifier` / `wsl-notify-send` | Clipboard and desktop notifications, one per platform |
+| `uv` | Python packages and venvs, per project |
+| `Zed` | Main GUI editor |
+| `Ghostty` | Main terminal (Windows Terminal on WSL) |
 
-## Installation priority: native package manager first, mise strictly as fallback
+## Installation priority: native package manager first, mise as fallback
 
-For any tool: try `dnf` (Fedora) or `brew` (macOS) first. `mise` is used **only** for packages missing from official native package managers — confirmed missing from Fedora official repositories: `starship`, `lazygit`, `topgrade`. `eza` and `lnav` have a less consistent package history — the guide installs them via `dnf` first and falls back to `mise` if that fails.
+Try `dnf` (Fedora) or `brew` (macOS) first. `mise` only installs what the official repos don't have. On Fedora that's `starship`, `lazygit` and `topgrade`. `eza` and `lnav` have come and gone from Fedora's repos, so the guide tries `dnf` and falls back to `mise` if it fails.
 
-On macOS, `brew` covers all of these natively — `mise` is reserved exclusively for language runtimes (`node`/`python`/`rust`/`go`/`java`).
+On macOS, `brew` has all of these. There, `mise` only handles language runtimes (`node`/`python`/`rust`/`go`/`java`).
 
-Two components remain outside of mise due to technical constraints rather than preference: **login shell** (`fish`, requires an absolute binary path registered in `/etc/shells`, not a shim) and **GUI applications** (`Zed`, `Ghostty`, which require desktop environment integration).
+Two things can't come from mise at all. The **login shell** (`zsh`) needs a real binary path registered in `/etc/shells`, and a shim won't do. **GUI apps** (`Zed`, `Ghostty`) need desktop integration.
 
 ---
 
-## mise — install first
+## mise: install first
 
-Every section below uses `mise` as a fallback package manager, so install it before anything else:
+Every section below uses `mise` as a fallback, so it goes in before anything else:
 
 ```bash
 curl https://mise.run | sh
@@ -87,21 +93,21 @@ python.uv_venv_auto = "create|source"' > ~/.config/mise/config.toml
 
 ```
 
-`python` and `java` are pinned deliberately — their ecosystems (PySpark, JVM build tooling) lag behind new releases, so this is a known-good baseline you bump by hand once you've verified your usual stacks support the new version. `node`, `rust`, and `go` float (`lts`/`latest`) because their ecosystems don't have that lag, and per-project pins (e.g. via `uv` for Python) override this global default anyway.
+`python` and `java` are pinned because PySpark and JVM build tooling take a while to support new releases. Bump them by hand once your usual stacks work on the new version. `node`, `rust` and `go` track `lts`/`latest` since their ecosystems keep up, and per-project pins (e.g. via `uv` for Python) override this global default anyway.
 
-If the exact patch build isn't available for your platform yet (precompiled binaries can lag a release by a few days), drop to the previous patch (check `mise ls-remote python | grep '^3.13'` for what's available) or force building from source with `mise settings set python.compile false` and run `mise install` again.
+If that exact patch has no prebuilt binary for your platform yet (they can lag a release by a few days), drop to the previous patch (`mise ls-remote python | grep '^3.13'` lists what's available), or build from source with `mise settings set python.compile false` and run `mise install` again.
 
 Sanity check:
 
 ```bash
 ~/.local/bin/mise --version || echo "MISSING mise"
-~/.local/bin/mise ls || echo "MISMATCH one or more [tools] failed to install — see output above"
+~/.local/bin/mise ls || echo "MISMATCH one or more [tools] failed to install, see output above"
 
 ```
 
 ---
 
-## Fedora WSL2 — prerequisite
+## Fedora WSL2: prerequisite
 
 ```powershell
 wsl --list --online
@@ -109,39 +115,43 @@ wsl --install FedoraLinux-44
 
 ```
 
-Then continue with the shared Fedora setup below. Come back to "Fedora WSL2 — after the shared setup" once that's done.
+Then do the shared Fedora setup below, and come back to "Fedora WSL2: after the shared setup" when it's done.
 
 ---
 
-## Fedora — shared setup (WSL2 & KDE)
+## Fedora: shared setup (WSL2 & KDE)
 
-Identical either way — run this once whether you just installed Fedora via WSL above or you're on a bare-metal/VM Fedora KDE install.
+Same steps whether you just installed Fedora through WSL or you're on bare-metal or a VM with Fedora KDE.
 
 ### 1. System packages + build toolchain (equivalent to Arch base-devel)
 
-Fedora lacks a single meta-package — build tools are packaged as a DNF group. Use the lowercase group ID; quoted display names (e.g. `"Development Tools"`) fail with `No match for argument`:
+Fedora has no single meta-package for build tools. They come as a DNF group. Use the lowercase group ID, because the display name (`"Development Tools"`) fails with `No match for argument`:
 
 ```bash
 sudo dnf upgrade --refresh -y
 sudo dnf group install -y development-tools
-sudo dnf install -y git gh curl wget unzip fish fzf man-db less openssh-clients \
-  wl-clipboard fontconfig libnotify
+sudo dnf install -y git gh curl wget unzip zsh zsh-autosuggestions zsh-syntax-highlighting \
+  fzf man-db less openssh-clients wl-clipboard fontconfig libnotify
 
 ```
 
 Sanity check:
 
 ```bash
-for bin in git gh curl wget unzip fish fzf man ssh wl-copy fc-cache notify-send; do
+for bin in git gh curl wget unzip zsh fzf man ssh wl-copy fc-cache notify-send; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
+done
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+    test -r /usr/share/$plugin/$plugin.zsh && echo "OK      $plugin" || echo "MISSING $plugin"
 done
 
 ```
 
-### 2. CLI tools — dnf, with a mise fallback for the two with inconsistent Fedora package history
+### 2. CLI tools
 
 ```bash
-sudo dnf install -y bat ripgrep fd-find zoxide git-delta neovim jq btop kubernetes-client k9s
+sudo dnf install -y bat ripgrep fd-find zoxide git-delta neovim tmux jq yq miller btop \
+  kubernetes-client k9s hyperfine pre-commit
 
 sudo dnf install -y eza || mise use -g eza
 sudo dnf install -y lnav || mise use -g lnav
@@ -150,12 +160,18 @@ mise use -g starship lazygit topgrade
 
 ```
 
-`jq`/`btop` are general-purpose (JSON on the command line, a terminal resource monitor); `kubernetes-client` (kubectl) and `k9s` are here because you run workloads on Kubernetes — both are official Fedora packages, no mise fallback needed.
+A few notes on this list:
+
+- `kubernetes-client` (kubectl) and `k9s` are here because I run workloads on Kubernetes. Both are in the official Fedora repos.
+- `yq` is the mikefarah Go version. It uses the same query syntax as `jq`, for YAML.
+- `hyperfine` runs the shell startup measurement at the end of the configuration section.
+- `pre-commit` is installed globally but does nothing in a repo until that repo has a `.pre-commit-config.yaml` and you run `pre-commit install`.
+- `miller` (binary `mlr`) reads CSV by header name. `mlr --icsv --opprint head -n 5 file.csv` is a quick look at an extract without opening a Python REPL.
 
 Sanity check:
 
 ```bash
-for bin in bat rg fd zoxide delta nvim eza lnav jq btop kubectl k9s; do
+for bin in bat rg fd zoxide delta nvim tmux eza lnav jq yq mlr btop kubectl k9s hyperfine pre-commit; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
 done
 for bin in starship lazygit topgrade; do
@@ -164,14 +180,14 @@ done
 
 ```
 
-### 3. Podman — container runtime (not Docker, no third-party repo)
+### 3. Podman: container runtime
 
 ```bash
 sudo dnf install -y podman podman-compose podman-docker
 
 ```
 
-`podman-docker` provides the `docker` command as a thin wrapper around Podman, so existing `docker`/`docker-compose` commands and scripts keep working without a rewrite. Runs rootless by default — no root daemon, no `usermod -aG docker` group grant, and no third-party repo/GPG import the way Docker's own `docker-ce.repo` needs. Applies the same on WSL2 as on Fedora KDE — this is a CLI tool, not a GUI app, so it doesn't fall under this guide's "GUI apps run on the Windows host" rule for WSL2.
+`podman-docker` adds a `docker` command that wraps Podman, so existing `docker` and `docker-compose` commands and scripts work unchanged. Podman runs rootless by default. There's no root daemon, no `usermod -aG docker`, and no third-party repo or GPG key to import like Docker's `docker-ce.repo` needs. This step also applies on WSL2: Podman is a CLI tool, so the "GUI apps go on the Windows host" rule doesn't apply to it.
 
 Sanity check:
 
@@ -183,39 +199,41 @@ podman info --format '{{.Host.Security.Rootless}}'   # should print true
 
 ```
 
-### 4. Default shell → fish
+### 4. Default shell → zsh
 
 ```bash
-grep -qxF /usr/bin/fish /etc/shells || echo /usr/bin/fish | sudo tee -a /etc/shells
-chsh -s /usr/bin/fish
+chsh -s /usr/bin/zsh
+touch ~/.zshrc
 
 ```
 
-`chsh` takes effect starting at the next login. To switch immediately in the current active shell:
+Fedora's `zsh` package adds itself to `/etc/shells` when installed. The empty `~/.zshrc` stops zsh's first-run wizard (`zsh-newuser-install`) from opening. The real config gets written in the "Shell, prompt, and tool configuration" section below.
+
+`chsh` applies from the next login. To switch the current shell right away:
 
 ```bash
-exec fish
+exec zsh
 
 ```
 
-fish's config file is written in the "Shell, prompt, and tool configuration" section below — until then it starts with no aliases or integrations. Run `exec fish` again once that section is done.
+zsh will have no aliases or integrations until that section is done. Run `exec zsh` again after it.
 
 Sanity check:
 
 ```bash
-getent passwd "$USER" | grep -q /usr/bin/fish \
-  && echo "OK      login shell is fish" \
-  || echo "PENDING chsh only applies at next login — run 'exec fish' now, or log out and back in"
+getent passwd "$USER" | grep -q /usr/bin/zsh \
+  && echo "OK      login shell is zsh" \
+  || echo "PENDING chsh only applies at next login, run 'exec zsh' now, or log out and back in"
 
 ```
 
 ---
 
-## Fedora WSL2 — after the shared setup
+## Fedora WSL2: after the shared setup
 
 ### Notifications (Windows Toast integration)
 
-The shared fish config below already aliases `notify-send` to `wsl-notify-send.exe` whenever `$WSL_DISTRO_NAME` is set, so this step is just fetching the binary:
+The zsh config below already aliases `notify-send` to `wsl-notify-send.exe` when `$WSL_DISTRO_NAME` is set. All this step does is get the binary:
 
 ```bash
 mkdir -p ~/.local/bin
@@ -232,16 +250,16 @@ command -v wsl-notify-send.exe >/dev/null \
 
 ```
 
-### Zed, Ghostty, Fonts — installed on host Windows side
+### Zed, Ghostty, Fonts: installed on host Windows side
 
-Ghostty does not support Windows directly — WSL relies on Windows Terminal. Zed needs installing natively on Windows, then connects to the Fedora WSL instance as a remote target (identical to the VS Code Remote-WSL pattern) — `git` isn't part of this step, it's already installed inside Fedora WSL2 in the shared setup above, which is where all the actual dev work happens:
+Ghostty doesn't run on Windows, so WSL uses Windows Terminal. Zed gets installed on Windows and connects to the Fedora WSL instance as a remote target, the same way VS Code Remote-WSL works. `git` isn't installed here because it's already inside Fedora WSL2 from the shared setup, and that's where the dev work happens:
 
 ```powershell
 winget install -e --id ZedIndustries.Zed
 
 ```
 
-Fonts must also be installed directly on Windows — same JetBrainsMono Nerd Font as the Fedora KDE section below, no separate pin to track since it's the same release.
+Fonts also go on Windows directly. Use the same JetBrainsMono Nerd Font release as the Fedora KDE section below.
 
 Sanity check:
 
@@ -256,7 +274,7 @@ if (winget list -e --id ZedIndustries.Zed 2>$null | Select-String -SimpleMatch Z
 
 ---
 
-## Fedora KDE — after the shared setup
+## Fedora KDE: after the shared setup
 
 ### Fonts
 
@@ -268,7 +286,7 @@ fc-cache -f ~/.local/share/fonts
 
 ```
 
-Pinned to `v3.5.1` instead of `/latest/download/` — bump the tag by hand when you want a newer release (check https://github.com/ryanoasis/nerd-fonts/releases).
+Pinned to `v3.5.1` rather than `/latest/download/`. To upgrade, change the tag by hand (releases: https://github.com/ryanoasis/nerd-fonts/releases).
 
 Sanity check:
 
@@ -279,13 +297,18 @@ fc-list | grep -qi "JetBrainsMono Nerd Font" \
 
 ```
 
-### Ghostty and Zed — via Terra repository (neither binary exists in Fedora official repositories)
+### Ghostty and Zed: via Terra repository
+
+Neither is in the official Fedora repos.
 
 ```bash
 sudo dnf install --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra$(rpm -E %fedora)" -y terra-release
+sudo dnf config-manager setopt terra.includepkgs="terra-release,ghostty*,zed*,dbeaver-bin"
 sudo dnf install -y ghostty zed
 
 ```
+
+The `setopt` line makes dnf ignore every Terra package except these (`dbeaver-bin` is for `APPS.md`). It's saved in `/etc/dnf/repos.override.d/`, so it survives `terra-release` updates rewriting `terra.repo`. To take something else from Terra later, add it to that list first.
 
 Sanity check:
 
@@ -293,25 +316,29 @@ Sanity check:
 for bin in ghostty zed; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
 done
+test "$(dnf repoquery -q --repo=terra --qf '%{name}\n' | grep -cvE '^(terra-release|ghostty|zed|dbeaver-bin)')" = 0 \
+  && echo "OK      terra limited to includepkgs" \
+  || echo "MISMATCH terra exposes more than ghostty/zed/dbeaver-bin"
 
 ```
 
 ### Notifications
 
-Natively supported via `libnotify` installed in the shared setup above.
+Handled by `libnotify` from the shared setup.
 
 ---
 
 ## macOS
 
-### 1. Homebrew — natively covers CLI tools on macOS; mise handles runtimes only
+### 1. Homebrew for CLI tools, mise for runtimes only
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
-brew install git gh curl fzf fish openssh eza bat ripgrep fd zoxide git-delta \
-  starship lazygit neovim topgrade lnav terminal-notifier jq btop kubectl k9s
+brew install git gh curl fzf openssh eza bat ripgrep fd zoxide git-delta \
+  starship lazygit neovim tmux topgrade lnav terminal-notifier jq yq miller btop kubectl k9s \
+  hyperfine pre-commit zsh-autosuggestions zsh-syntax-highlighting
 brew install --cask zed ghostty font-jetbrains-mono-nerd-font
 
 ```
@@ -319,8 +346,11 @@ brew install --cask zed ghostty font-jetbrains-mono-nerd-font
 Sanity check:
 
 ```bash
-for bin in git gh curl fzf fish ssh eza bat rg fd zoxide delta starship lazygit nvim topgrade lnav terminal-notifier jq btop kubectl k9s; do
+for bin in git gh curl fzf ssh eza bat rg fd zoxide delta starship lazygit nvim tmux topgrade lnav terminal-notifier jq yq mlr btop kubectl k9s hyperfine pre-commit; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
+done
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+    test -r /opt/homebrew/share/$plugin/$plugin.zsh && echo "OK      $plugin" || echo "MISSING $plugin"
 done
 for app in Zed Ghostty; do
     test -d "/Applications/$app.app" && echo "OK      $app.app" || echo "MISSING $app.app"
@@ -328,41 +358,30 @@ done
 
 ```
 
-### 2. Default shell → fish
+### 2. Default shell: zsh
 
-```bash
-echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
-chsh -s /opt/homebrew/bin/fish
-
-```
-
-`chsh` takes effect starting at the next login. To switch immediately in the current active shell:
-
-```bash
-exec fish
-
-```
+macOS has used `/bin/zsh` as the default login shell since Catalina, so there's nothing to install or `chsh`. I use Apple's build instead of Homebrew's to have one less thing to upgrade. Only the plugins come from Homebrew (Step 1).
 
 Sanity check:
 
 ```bash
-dscl . -read "/Users/$USER" UserShell 2>/dev/null | grep -q /opt/homebrew/bin/fish \
-  && echo "OK      login shell is fish" \
-  || echo "PENDING chsh only applies at next login — run 'exec fish' now, or log out and back in"
+dscl . -read "/Users/$USER" UserShell 2>/dev/null | grep -q /bin/zsh \
+  && echo "OK      login shell is zsh" \
+  || echo "MISMATCH run 'chsh -s /bin/zsh', applies at next login"
 
 ```
 
 ### 3. Notifications
 
-Handled via `terminal-notifier` installed in Step 1 — the `notify` function defined in `config.fish` automatically detects and uses this binary.
+`terminal-notifier` from Step 1. The `notify` function in `~/.zshrc` picks it up automatically.
 
 ---
 
 ## Git identity, SSH key, and commit signing
 
-Basic setup for anyone new to this — needs `git` and `openssh` from your platform section above.
+Basic setup. Needs `git` and `openssh` from your platform section.
 
-### Git — identity and sane defaults
+### Git: identity and defaults
 
 ```bash
 git config --global user.name "Your Name"
@@ -372,7 +391,7 @@ git config --global pull.rebase true
 
 ```
 
-Sets who you are on every commit, plus two defaults worth having everywhere: new repos start on `main`, and `pull` rebases instead of creating merge commits.
+Sets your name and email for every commit. New repos start on `main`, and `pull` rebases instead of creating merge commits.
 
 Sanity check:
 
@@ -383,7 +402,7 @@ git config --global user.name >/dev/null && git config --global user.email >/dev
 
 ```
 
-### SSH key — skip this block if `~/.ssh/id_ed25519.pub` already exists
+### SSH key: skip this block if `~/.ssh/id_ed25519.pub` already exists
 
 ```bash
 ssh-keygen -t ed25519 -C "you@example.com"
@@ -392,7 +411,7 @@ ssh-add ~/.ssh/id_ed25519
 
 ```
 
-Copy `~/.ssh/id_ed25519.pub` and add it on GitHub/GitLab under Settings → SSH keys, as an **Authentication key**. This is what lets `git clone git@github.com:...` and `git push` work without typing a password.
+Copy `~/.ssh/id_ed25519.pub` and add it on GitHub/GitLab under Settings → SSH keys as an **Authentication key**. That lets `git clone git@github.com:...` and `git push` work without a password.
 
 Sanity check:
 
@@ -401,9 +420,9 @@ ssh -T git@github.com
 
 ```
 
-"Hi \<username\>! You've successfully authenticated" means it worked — GitHub's SSH endpoint always exits 1 and refuses a shell, that part is normal.
+If you see "Hi \<username\>! You've successfully authenticated", it worked. GitHub always exits 1 here and refuses a shell. That's normal.
 
-### SSH config — two hardening lines
+### SSH config: two hardening lines
 
 ```bash
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
@@ -414,7 +433,7 @@ chmod 600 ~/.ssh/config
 
 ```
 
-`IdentitiesOnly` stops ssh from offering every key in `~/.ssh/` to every host it connects to; `HashKnownHosts` keeps `~/.ssh/known_hosts` from listing which servers you've connected to in plain text.
+`IdentitiesOnly` stops ssh from offering every key in `~/.ssh/` to every host. `HashKnownHosts` stops `~/.ssh/known_hosts` from listing the servers you've connected to in plain text.
 
 Sanity check:
 
@@ -425,7 +444,7 @@ grep -q IdentitiesOnly ~/.ssh/config 2>/dev/null && grep -q HashKnownHosts ~/.ss
 
 ```
 
-### Commit signing — reuses the SSH key above, no new tool
+### Commit signing with the same SSH key
 
 ```bash
 git config --global gpg.format ssh
@@ -434,7 +453,7 @@ git config --global commit.gpgsign true
 
 ```
 
-Add the same public key to GitHub a **second time**, this time as a **Signing key** (a separate role from the Authentication key above, same Settings → SSH keys page) — without that, commits sign locally but still show up unverified.
+Add the same public key to GitHub again, this time as a **Signing key**, on the same Settings → SSH keys page. Otherwise commits get signed locally but still show as unverified on GitHub.
 
 Sanity check:
 
@@ -445,16 +464,16 @@ test "$(git config --global --get commit.gpgsign)" = true \
 
 ```
 
-### GitHub CLI (`gh`) — repo/PR/issue management without leaving the terminal
+### GitHub CLI (`gh`)
 
-`gh` is already installed in your platform section above. It uses its own token, separate from the SSH key above — SSH is what `git push`/`git clone` authenticate with, `gh`'s token is what lets it talk to GitHub's API (`gh repo create`, `gh pr create`, `gh issue list`, ...):
+`gh` was installed in your platform section. It authenticates with its own token, separate from the SSH key. `git push` and `git clone` use SSH, and `gh` uses the token to talk to GitHub's API (`gh repo create`, `gh pr create`, `gh issue list`, ...):
 
 ```bash
 gh auth login --hostname github.com --git-protocol ssh --web
 
 ```
 
-Prints a one-time code and a `github.com/login/device` URL — open it, paste the code, approve in the browser. `--git-protocol ssh` tells `gh` to keep using the SSH key already set up above for any repo it clones, instead of switching you to HTTPS.
+It prints a one-time code and a `github.com/login/device` URL. Open the URL, paste the code and approve. `--git-protocol ssh` makes `gh` clone over SSH with the key above instead of switching to HTTPS.
 
 Sanity check:
 
@@ -463,86 +482,97 @@ gh auth status
 
 ```
 
-Full command reference and the safety rules for anything destructive (force-push, history rewrite, repo delete) are in `GIT.md`, not repeated here.
+Day-to-day commands and the rules for destructive ones (force-push, history rewrite, repo delete) are in `GIT.md`.
 
 ---
 
 ## Shell, prompt, and tool configuration
 
-Run this after completing your platform section above — it assumes `fish`, `starship`, `git-delta`, `lnav`, `topgrade`, `neovim`, and `git` are already installed.
+Run this after your platform section. It needs `zsh`, `starship`, `git-delta`, `lnav`, `topgrade`, `hyperfine` and `git` installed.
 
-### fish — ~/.config/fish/config.fish
+### zsh: ~/.zshrc
 
-```fish
-mkdir -p ~/.config/fish
-echo '# --- PATH -------------------------------------------------------------------
-fish_add_path -g $HOME/.local/bin $HOME/.local/share/mise/shims
-if test -d /opt/homebrew/bin
-    eval (/opt/homebrew/bin/brew shellenv)
-end
+```bash
+cat > ~/.zshrc <<'EOF'
+# --- PATH -------------------------------------------------------------------
+typeset -U path
+path=($HOME/.local/bin $HOME/.local/share/mise/shims $path)
+[[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# --- history: zsh keeps none on disk until told where -----------------------
+HISTFILE=~/.zsh_history
+HISTSIZE=50000
+SAVEHIST=50000
+setopt share_history hist_ignore_all_dups hist_ignore_space
+
+# --- completion ---------------------------------------------------------------
+autoload -Uz compinit && compinit
 
 # --- vi keybinds (starship vi-mode indicator) -------------------------------
-set -g fish_key_bindings fish_vi_key_bindings
-
-# --- quiet greeting -----------------------------------------------------------
-set -g fish_greeting ""
+bindkey -v
+bindkey -M viins '^?' backward-delete-char   # backspace past the point insert mode started
 
 # --- man pages through bat: already installed, no new dependency -----------
-set -gx MANPAGER "sh -c \"col -bx | bat -l man -p\""
-set -gx PAGER "bat --plain"
+export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+export PAGER="bat --plain"
 
 # --- runtimes / tools / navigation (each executes only if binary exists) ----
-type -q mise     && mise activate fish | source
-type -q zoxide   && zoxide init fish | source
-type -q starship && starship init fish | source
+(( $+commands[mise] ))     && eval "$(mise activate zsh)"
+(( $+commands[zoxide] ))   && eval "$(zoxide init zsh)"
+(( $+commands[starship] )) && eval "$(starship init zsh)"
 
 # --- fzf (Ctrl-T, Ctrl-R, Alt-C) --------------------------------------------
-type -q fzf && fzf --fish | source
+(( $+commands[fzf] )) && source <(fzf --zsh)
 
 # --- WSL: notify-send has no native implementation, wsl-notify-send.exe fills the gap ---
-if set -q WSL_DISTRO_NAME
-    alias notify-send "wsl-notify-send.exe"
-end
+[[ -n $WSL_DISTRO_NAME ]] && alias notify-send='wsl-notify-send.exe'
 
 # --- docker compatibility: the podman-docker package already provides a real
 # `docker` binary on Fedora (works from cron/scripts too, not just here), so this
 # only fires on macOS, where no such wrapper package exists (see APPS.md) ---
-if not type -q docker; and type -q podman
-    alias docker "podman"
-end
-if not type -q docker-compose; and type -q podman-compose
-    alias docker-compose "podman-compose"
-end
+(( ! $+commands[docker] && $+commands[podman] )) && alias docker='podman'
+(( ! $+commands[docker-compose] && $+commands[podman-compose] )) && alias docker-compose='podman-compose'
 
 # --- cross-platform notifications: unified command name across all 3 machines ---
-function notify
-    if type -q terminal-notifier
-        terminal-notifier -title (test -n "$argv[1]"; and echo $argv[1]; or echo "Shell") -message $argv[2]
-    else if type -q notify-send
-        notify-send $argv[1] $argv[2]
-    end
-end
+notify() {
+    if (( $+commands[terminal-notifier] )); then
+        terminal-notifier -title "${1:-Shell}" -message "$2"
+    elif (( $+commands[notify-send] )); then
+        notify-send "$1" "$2"
+    fi
+}
 
 # --- aliases: direct and safe drop-in replacements only ----------------------
-alias ls "eza --icons --group-directories-first"
-alias ll "eza -l --icons --group-directories-first --git"
-alias cat "bat --paging=never"
-alias vim "nvim"
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -l --icons --group-directories-first --git'
+alias cat='bat --paging=never'
+alias vim='nvim'
 
 # --- local, machine-specific overrides: never touched or overwritten by this guide ---
-if test -f ~/.config/fish/local.fish
-    source ~/.config/fish/local.fish
-end' > ~/.config/fish/config.fish
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+
+# --- plugins: last on purpose, syntax-highlighting has to load after every
+# widget above (fzf, vi mode, anything in .zshrc.local) to color them ---
+for dir in /usr/share /opt/homebrew/share; do
+    [[ -r $dir/zsh-autosuggestions/zsh-autosuggestions.zsh ]] \
+        && source $dir/zsh-autosuggestions/zsh-autosuggestions.zsh
+    [[ -r $dir/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] \
+        && source $dir/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+done
+unset dir
+EOF
 
 ```
 
-Re-running this block overwrites `config.fish` wholesale — put any personal or machine-specific tweaks in `~/.config/fish/local.fish` instead, which this loads but never creates or touches.
+Running this block again replaces `~/.zshrc` completely. Personal or machine-specific tweaks go in `~/.zshrc.local`, which the config loads but never creates or edits.
+
+Out of the box, zsh doesn't save history to disk and has no suggestions or highlighting. The history block and the two plugins add those. The plugins come from `dnf`/`brew` and load with a plain `source`. I skipped plugin managers (Oh My Zsh, zinit) because they pull unpinned scripts from GitHub on every update, and two files don't need a manager.
 
 Sanity check:
 
 ```bash
-test -s ~/.config/fish/config.fish && echo "OK      config.fish written" || echo "MISSING config.fish is empty or absent"
-fish -n ~/.config/fish/config.fish && echo "OK      config.fish is syntactically valid" || echo "MISMATCH fish -n reported a syntax error above"
+test -s ~/.zshrc && echo "OK      .zshrc written" || echo "MISSING .zshrc is empty or absent"
+zsh -n ~/.zshrc && echo "OK      .zshrc is syntactically valid" || echo "MISMATCH zsh -n reported a syntax error above"
 
 ```
 
@@ -560,9 +590,9 @@ test -s ~/.config/starship.toml && echo "OK      starship.toml written" || echo 
 
 ```
 
-### Ghostty — point it at the Nerd Font (Fedora KDE & macOS only — skip on WSL, Ghostty doesn't run there)
+### Ghostty: use the Nerd Font (Fedora KDE and macOS only)
 
-The font is installed above so starship's icons render, but nothing tells Ghostty to use it yet:
+Skip this on WSL, where Ghostty doesn't run. The font was installed so starship's icons render, but Ghostty won't use it until the config says so:
 
 ```bash
 mkdir -p ~/.config/ghostty
@@ -579,9 +609,9 @@ grep -q "JetBrainsMono Nerd Font" ~/.config/ghostty/config 2>/dev/null \
 
 ```
 
-### git — delta as the diff/merge pager
+### git: delta as the diff/merge pager
 
-`git-delta` is installed above as a CLI tool, but git won't use it until told to:
+`git-delta` is installed, but git only uses it once configured:
 
 ```bash
 git config --global core.pager delta
@@ -598,7 +628,7 @@ test "$(git config --global --get core.pager)" = delta \
 
 ```
 
-### lnav — regex log highlighting
+### lnav: regex log highlighting
 
 ```bash
 mkdir -p ~/.lnav/formats/installed
@@ -623,7 +653,7 @@ test -s ~/.lnav/formats/installed/custom-highlights.json \
 
 ```
 
-### topgrade — system-wide upgrades (dnf/brew + mise + flatpak)
+### topgrade: system-wide upgrades (dnf/brew + mise + flatpak)
 
 ```bash
 mkdir -p ~/.config
@@ -636,7 +666,7 @@ max_concurrency = 5' > ~/.config/topgrade.toml
 
 ```
 
-Run `topgrade` for components it detects natively (dnf/brew, flatpak, git repositories). It does not officially confirm full native support for `mise` — run `mise upgrade` independently until verified in your local setup (`topgrade --dry-run` displays all detected routines).
+`topgrade` updates what it detects (dnf/brew, flatpak, git repos). Its `mise` support isn't documented as complete, so run `mise upgrade` separately until you've confirmed it on your machine. `topgrade --dry-run` lists every step it detected.
 
 Sanity check:
 
@@ -645,62 +675,63 @@ test -s ~/.config/topgrade.toml && echo "OK      topgrade.toml written" || echo 
 
 ```
 
-### LazyVim — terminal editor, designated role: non-GUI editing environments
+### Neovim and tmux: no config
+
+Neither one gets a config file. Servers you SSH into usually have both installed with stock settings, so learning the defaults here means the same keys work there. Editor roles: Zed for daily work, `nvim` when there's no GUI, `lazygit` for git.
+
+tmux keys to learn first. Every shortcut starts with the prefix `Ctrl-b`: press it, release, then press the key.
+
+| Keys | Action |
+|---|---|
+| `tmux new -s name` | Start a named session |
+| `Ctrl-b d` | Detach, the session keeps running |
+| `tmux ls` / `tmux a -t name` | List sessions / reattach to one |
+| `Ctrl-b %` / `Ctrl-b "` | Split side by side / top and bottom |
+| `Ctrl-b` + arrow | Move between panes |
+| `Ctrl-b c` / `Ctrl-b n` | New window / next window |
+| `Ctrl-b [` | Scroll mode (`q` to leave) |
+
+Sanity check:
 
 ```bash
-mv ~/.config/nvim ~/.config/nvim.bak 2>/dev/null || true
-git clone https://github.com/LazyVim/starter ~/.config/nvim
-git -C ~/.config/nvim checkout 803bc181d7c0d6d5eeba9274d9be49b287294d99
-rm -rf ~/.config/nvim/.git
-mkdir -p ~/.config/nvim/lua/plugins
-echo 'return {
-  { "folke/tokyonight.nvim", opts = { style = "night" } },
-  { "LazyVim/LazyVim", opts = { colorscheme = "tokyonight-night" } },
-}' > ~/.config/nvim/lua/plugins/colorscheme.lua
-nvim   # plugins install automatically on first startup
+tmux new -d -s sanity && tmux has -t sanity && tmux kill-session -t sanity \
+  && echo "OK      tmux can start, detach and kill a session" \
+  || echo "MISMATCH tmux failed to start a session"
 
 ```
 
-Pinned to a specific commit instead of tracking `HEAD` — the `.git` removal a few lines up would otherwise silently freeze you at whatever commit existed on setup day, with no record of which one. Bump it deliberately by checking https://github.com/LazyVim/starter for a newer commit and updating the SHA above.
+### Performance: measure shell startup time
 
-`lazygit` handles Git operations (stage/diff/branch); LazyVim handles file editing when a GUI is unavailable; Zed handles primary development tasks.
-
-Sanity check — run once `nvim` has finished installing plugins and you've quit it:
+Everything the config loads (`compinit`, `mise activate`, `zoxide init`, `starship init`, `fzf --zsh`, the two plugins) runs every time a shell opens. To see how long that takes:
 
 ```bash
-test -f ~/.config/nvim/lua/plugins/colorscheme.lua && echo "OK      colorscheme.lua in place" || echo "MISSING colorscheme.lua"
-test -d ~/.local/share/nvim/lazy/LazyVim && echo "OK      LazyVim plugin installed" || echo "MISSING LazyVim plugin — reopen nvim to retry"
+hyperfine --warmup 3 'zsh -i -c exit'
 
 ```
 
-### Performance — measure shell startup cost
-
-Every integration above (`mise activate`, `zoxide init`, `starship init`, `fzf --fish`) runs on every new shell. None of it is free — this is how to see what it's actually costing you, instead of assuming:
-
-```bash
-time fish -i -c exit
-
-```
-
-`real` is the number that matters — it's what you feel every time a new terminal opens. No hard budget is set here yet; run it after finishing setup and again after adding anything to `local.fish`, and treat a sudden jump as a signal to find out which integration caused it (comment one out at a time in `config.fish` and re-run to isolate it).
+Look at the mean. That's the delay you get every time you open a terminal. `hyperfine` runs the command many times and reports the spread too, so one slow run (cold disk cache, busy CPU) won't look like a regression the way it would with a single `time`. I haven't set a target number. Run it after setup and again whenever you add something to `.zshrc.local`. If it jumps, comment out one integration at a time in `~/.zshrc` and re-run until you find which one did it.
 
 ---
 
-## Full audit (all platforms) — run anytime, not just at setup
+## Full audit (all platforms)
 
-Every sanity check above only gets run once, right after its own step — nothing re-checks any of it later. That's fine for catching a failed install on day one, but it means nothing here ever notices a machine drifting away from what this guide actually asks for (signing quietly never enabled, `pull.rebase` never set, `delta` installed but never wired up as the pager). This section is the fix: every state check from above, in one block, meant to be pasted again whenever something feels off — not just once.
+Each sanity check above runs once, right after its step. That catches a failed install on day one, but not a machine that drifts later: signing never turned on, `pull.rebase` never set, `delta` installed but not configured as the pager. This section collects every check in one place so you can paste it again whenever something seems off.
 
 Binaries:
 
-```fish
-for bin in mise starship nvim lazygit eza bat rg fd delta fish fzf lnav topgrade zoxide jq btop kubectl k9s gh podman
-    printf '%-10s ' $bin
-    type -q $bin; and $bin --version 2>/dev/null | head -n1; or echo MISSING
-end
+```bash
+for bin in mise starship nvim tmux lazygit eza bat rg fd delta zsh fzf lnav topgrade zoxide jq yq mlr btop kubectl k9s gh podman hyperfine pre-commit; do
+    printf '%-11s ' $bin
+    if command -v $bin >/dev/null; then
+        $bin --version 2>/dev/null | head -n1 | grep . || echo "installed (no --version flag)"
+    else
+        echo MISSING
+    fi
+done
 
 ```
 
-Configuration state — the part a binary check alone can't see:
+Configuration, which a binary check can't see:
 
 ```bash
 git config --global user.name >/dev/null && git config --global user.email >/dev/null \
@@ -719,10 +750,9 @@ if command -v podman >/dev/null; then
   test "$(podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null)" = true \
     && echo "OK      podman rootless" || echo "MISMATCH podman not running rootless"
 fi
-test -s ~/.config/fish/config.fish && echo "OK      fish config.fish" || echo "MISSING fish config.fish"
+test -s ~/.zshrc && echo "OK      .zshrc" || echo "MISSING .zshrc"
 test -s ~/.config/starship.toml && echo "OK      starship.toml" || echo "MISSING starship.toml"
 test -s ~/.config/topgrade.toml && echo "OK      topgrade.toml" || echo "MISSING topgrade.toml"
 test -s ~/.lnav/formats/installed/custom-highlights.json && echo "OK      lnav highlights" || echo "MISSING lnav highlights"
-test -d ~/.local/share/nvim/lazy/LazyVim && echo "OK      LazyVim installed" || echo "MISSING LazyVim"
 
 ```
