@@ -1,0 +1,6 @@
+# APPS.md, Fedora KDE, Flatpak part. Every one is marked Verified on Flathub.
+md.obsidian.Obsidian
+com.usebruno.Bruno
+com.bitwarden.desktop
+com.discordapp.Discord
+net.ankiweb.Anki

@@ -1,0 +1,8 @@
+# Fedora KDE only, on top of fedora.txt. ghostty and zed come from Terra, which setup/fedora.md adds first.
+# snapper and the dnf5 actions plugin: a snapshot before and after every dnf transaction (setup/fedora.md)
+fontconfig
+libnotify
+ghostty
+zed
+snapper
+libdnf5-plugin-actions

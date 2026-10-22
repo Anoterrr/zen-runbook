@@ -1,0 +1,15 @@
+[tools]
+node = "lts"
+python = "3.13.15"
+rust = "latest"
+go = "latest"
+java = "temurin-17"
+# Fedora only: dnf doesn't package these, brew does
+starship = { version = "latest", os = ["linux"] }
+lazygit = { version = "latest", os = ["linux"] }
+topgrade = { version = "latest", os = ["linux"] }
+# duckdb: pinned until the aqua registry knows 2.0's renamed release assets (as of 2026-10). Then back to "latest"
+duckdb = { version = "1.5.6", os = ["linux"] }
+
+[settings]
+python.uv_venv_auto = "create|source"

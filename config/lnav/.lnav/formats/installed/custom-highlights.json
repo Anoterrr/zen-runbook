@@ -1,0 +1,9 @@
+{
+  "custom-highlights": {
+    "highlights": {
+      "error": { "pattern": "(?i)error|fail(ed|ure)?", "color": "Red" },
+      "warn":  { "pattern": "(?i)warn(ing)?",           "color": "Yellow" },
+      "ok":    { "pattern": "(?i)success|done|✓",        "color": "Green" }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+# Checks run on every commit to this repo. Enable once per clone: pre-commit install
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-json         # packages/windows-apps.winget.json, lnav formats
+      - id: check-toml         # config/mise, config/topgrade
+      - id: check-yaml         # this file
+      - id: check-merge-conflict
+  - repo: local
+    hooks:
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck       # from dnf/brew (packages/), not a downloaded copy
+        language: system
+        types: [shell]
+        exclude_types: [zsh]    # shellcheck can't parse zsh, and config/zsh/.zshrc is zsh

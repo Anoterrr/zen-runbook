@@ -1,0 +1,51 @@
+# Fedora, shared by WSL2 and KDE. One package per line, lines starting with # are skipped.
+# Install: sudo dnf install -y $(grep -v '^#' ~/repos/zen-runbook/packages/fedora.txt)
+
+# build toolchain, Fedora's equivalent of Arch base-devel
+@development-tools
+
+# base system
+git
+gh
+curl
+unzip
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+fzf
+man-db
+less
+openssh-clients
+wl-clipboard
+stow
+
+# CLI tools
+bat
+ripgrep
+fd-find
+zoxide
+git-delta
+eza
+lnav
+neovim
+tmux
+jq
+yq
+miller
+btop
+kubernetes1.37-client
+k9s
+kind
+hyperfine
+pre-commit
+ShellCheck
+uv
+
+# backup (BACKUP.md)
+restic
+rclone
+
+# containers
+podman
+podman-compose
+podman-docker

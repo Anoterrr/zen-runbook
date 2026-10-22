@@ -1,0 +1,11 @@
+# Once a day. Persistent: if the machine (or WSL) was off at that time, it runs on the next start.
+[Unit]
+Description=Daily restic backup (zen-runbook BACKUP.md)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

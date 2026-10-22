@@ -1,0 +1,12 @@
+# APPS.md, Fedora KDE, dnf part. RPM Fusion, Brave's repo and Terra are added first (APPS.md).
+syncthing
+dbeaver-bin
+brave-browser
+libreoffice
+vlc
+obs-studio
+inkscape
+krita
+blender
+p7zip
+p7zip-plugins

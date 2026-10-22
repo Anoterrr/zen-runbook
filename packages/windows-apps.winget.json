@@ -1,0 +1,71 @@
+{
+  "$schema": "https://aka.ms/winget-packages.schema.2.0.json",
+  "CreationDate": "2026-10-22T00:00:00.000-00:00",
+  "Sources": [
+    {
+      "Packages": [
+        {
+          "PackageIdentifier": "Bitwarden.Bitwarden"
+        },
+        {
+          "PackageIdentifier": "Brave.Brave"
+        },
+        {
+          "PackageIdentifier": "Obsidian.Obsidian"
+        },
+        {
+          "PackageIdentifier": "Syncthing.Syncthing"
+        },
+        {
+          "PackageIdentifier": "Bruno.Bruno"
+        },
+        {
+          "PackageIdentifier": "DBeaver.DBeaver.Community"
+        },
+        {
+          "PackageIdentifier": "Discord.Discord"
+        },
+        {
+          "PackageIdentifier": "Anki.Anki"
+        },
+        {
+          "PackageIdentifier": "TheDocumentFoundation.LibreOffice"
+        },
+        {
+          "PackageIdentifier": "VideoLAN.VLC"
+        },
+        {
+          "PackageIdentifier": "OBSProject.OBSStudio"
+        },
+        {
+          "PackageIdentifier": "Canva.Affinity"
+        },
+        {
+          "PackageIdentifier": "Inkscape.Inkscape"
+        },
+        {
+          "PackageIdentifier": "KDE.Krita"
+        },
+        {
+          "PackageIdentifier": "BlenderFoundation.Blender"
+        },
+        {
+          "PackageIdentifier": "Cockos.REAPER"
+        },
+        {
+          "PackageIdentifier": "Valve.Steam"
+        },
+        {
+          "PackageIdentifier": "Microsoft.PowerToys"
+        }
+      ],
+      "SourceDetails": {
+        "Argument": "https://cdn.winget.microsoft.com/cache",
+        "Identifier": "Microsoft.Winget.Source_8wekyb3d8bbwe",
+        "Name": "winget",
+        "Type": "Microsoft.PreIndexed.Package"
+      }
+    }
+  ],
+  "WinGetVersion": "1.29.380"
+}

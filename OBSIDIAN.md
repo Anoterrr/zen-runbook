@@ -1,6 +1,6 @@
 # zen-runbook - Obsidian notes (Windows / Fedora KDE / macOS / Android)
 
-Companion to `APPS.md`, which installs Obsidian itself (winget on Windows, Flatpak on Fedora KDE, cask on macOS). This file covers how the vault is organized, the daily flow, and the Syncthing setup that keeps it in sync across devices.
+Companion to `APPS.md`, which installs Obsidian and Syncthing on every platform from the lists in `packages/`. This file covers how the vault is organized, the daily flow, the Syncthing setup that keeps it in sync across devices, and the backup to a private GitHub repo.
 
 Current machines: Windows PC, Android phone and Mac. Windows is the daily driver until I move to Fedora KDE, so the Fedora steps are here for when that happens.
 
@@ -71,25 +71,19 @@ Community plugins (Dataview, Obsidian Git, etc.) run JavaScript with no sandbox 
 
 ## Syncthing: keeps the vault synced across devices
 
-Peer-to-peer: devices talk directly to each other, and nothing is stored on a third-party server. Install it on each platform below, then pair all devices once and set up the vault folder as described in "Vault folder settings".
+Peer-to-peer: devices talk directly to each other, and nothing is stored on a third-party server. `APPS.md` installs it on each computer. Below is how to start it on each one, then pair all devices once and set up the vault folder as described in "Vault folder settings".
 
 ### Windows
 
-```powershell
-winget install -e --id Syncthing.Syncthing
+`Syncthing.Syncthing` is the official core binary (publisher: The Syncthing Authors): no tray icon, no autostart, just `syncthing.exe` and its web UI at `localhost:8384` while it runs. To start it with Windows: Start menu → Task Scheduler → Create Task, trigger "At log on", action pointing at the installed `syncthing.exe` with the arguments `--no-console --no-browser`.
 
-```
-
-This installs only the official core binary (publisher: The Syncthing Authors): no tray icon, no autostart, just `syncthing.exe` and its web UI at `localhost:8384` while it runs. To start it with Windows: Start menu → Task Scheduler → Create Task, trigger "At log on", action pointing at the installed `syncthing.exe` with the arguments `--no-console --no-browser`.
-
-**SyncTrayzor** is a third-party, open-source tray wrapper for Syncthing with a tray icon and autostart built in. The original project is archived. The maintained one is the GermanCoding fork (`winget install -e --id GermanCoding.SyncTrayzor`). Don't install `SyncTrayzor.SyncTrayzor`, that's the old, dead one. I don't install it by default because it doesn't come from the Syncthing project, the same rule as the extension advice in `HARDENING.md`. Worth it if starting Syncthing by hand gets annoying.
+**SyncTrayzor** is a third-party, open-source tray wrapper for Syncthing with a tray icon and autostart built in. The original project is archived. The maintained one (as of 2026-09) is the GermanCoding fork (`winget install -e --id GermanCoding.SyncTrayzor`). Don't install `SyncTrayzor.SyncTrayzor`, that's the old, dead one. I don't install it by default because it doesn't come from the Syncthing project, the same rule as the extension advice in `HARDENING.md`. Worth it if starting Syncthing by hand gets annoying.
 
 ### Fedora KDE (after the move)
 
-Official Fedora package, no third-party repo:
+Official Fedora package, no third-party repo. Start it with the user session:
 
 ```bash
-sudo dnf install -y syncthing
 systemctl --user enable --now syncthing.service
 
 ```
@@ -99,16 +93,13 @@ The firewall step in `HARDENING.md` opens Syncthing's ports. Without it, devices
 ### macOS
 
 ```bash
-brew install syncthing
 brew services start syncthing
 
 ```
 
-On macOS Syncthing is a Homebrew formula, not a cask, because it's a background service and not a GUI app.
-
 ### Android
 
-The official Syncthing Android app was discontinued in December 2024. The maintained replacement is **Syncthing-Fork**, open source, same protocol, and it works with official Syncthing on the other devices. It's now maintained at `researchxxl/syncthing-android` (the old Catfriend1 repo redirects there).
+The official Syncthing Android app was discontinued in December 2024. The maintained replacement is **Syncthing-Fork**, open source, same protocol, and it works with official Syncthing on the other devices. It's now maintained at `researchxxl/syncthing-android` (as of 2026-09, the old Catfriend1 repo redirects there).
 
 Where I get it matters:
 
@@ -130,10 +121,11 @@ In the web UI (or the phone app), edit the vault folder:
   ```
   .obsidian/workspace.json
   .obsidian/workspace-mobile.json
+  .git
   ```
 
-  Ignore patterns don't sync between devices. Add them on each one.
-- **File Versioning**: "Staggered", at least on the desktop. Syncthing isn't a backup: a deleted or broken note gets deleted or broken on every device. With versioning, the old copies stay in `.stversions` inside the vault.
+  Ignore patterns don't sync between devices. Add them on each one. `.git` is the backup below: only the main machine has it, and a git folder synced half-written to another device corrupts it.
+- **File Versioning**: "Staggered", at least on the desktop. Syncthing isn't a backup: a deleted or broken note gets deleted or broken on every device. With versioning, the old copies stay in `.stversions` inside the vault. The real backup is the next section.
 
 **Conflicts.** When two devices change the same file before syncing, Syncthing keeps both and names one `*.sync-conflict-*`. They don't go away by themselves. Every now and then:
 
@@ -163,5 +155,46 @@ Sanity check (Windows, PowerShell):
 
 ```powershell
 if (Get-Process syncthing -ErrorAction SilentlyContinue) { Write-Host "OK      syncthing running" } else { Write-Host "MISSING syncthing not running" }
+
+```
+
+---
+
+## Backup: private GitHub repo
+
+Syncthing copies mistakes to every device, and `.stversions` lives on the same disks. The backup is a git repo of the vault, pushed to a private GitHub repo: off my machines, with the full history of every note. It runs on the main machine only (Windows through WSL2 today, Fedora KDE after the move). The vault is also in the daily restic backup (`BACKUP.md`), since it lives inside Documents. The other devices get the notes through Syncthing as before.
+
+One time, on the main machine:
+
+```bash
+vault="/mnt/c/Users/$(cmd.exe /c 'echo %USERNAME%' 2>/dev/null | tr -d '\r')/Documents/Obsidian Vault"   # Fedora KDE: the vault's path there
+cd "$vault"
+git init -b main
+git config core.fileMode false   # WSL2: every file on /mnt/c looks executable
+printf '%s\n' .obsidian/workspace.json .obsidian/workspace-mobile.json .trash/ .stfolder .stversions/ '*.sync-conflict-*' > .gitignore
+git add -A && git commit -m "Vault snapshot $(date +%F)"
+gh repo create obsidian-vault --private --source . --push
+
+```
+
+`.gitignore` leaves out what's per device or already a copy: window layout, Obsidian's trash, Syncthing's own files and conflict copies.
+
+Then, whenever I've written something worth keeping, and at least weekly (with `vault` set as above):
+
+```bash
+git -C "$vault" add -A && git -C "$vault" commit -qm "Vault snapshot $(date +%F)"; git -C "$vault" push -q
+
+```
+
+The commit fails harmlessly when nothing changed, and the push still runs. Commits are signed like any other (`setup/git.md`).
+
+Private means private to my account, not encrypted: GitHub can read it, and so can anyone who gets into the account. That's why 2FA on GitHub matters here (`HARDENING.md`), and why nothing like a password or a document number goes in a note. GitHub rejects files over 100 MB, which only a video would hit, and videos don't go in the vault.
+
+After the move to Fedora KDE, the vault arrives through Syncthing without `.git`. Clone the repo anywhere, move its `.git` folder into the vault, and `git status` should show nothing changed. Then delete `.git` from the old machine's vault, so only one machine ever has it.
+
+Sanity check (main machine):
+
+```bash
+git -C "$vault" remote get-url origin && git -C "$vault" log -1 --format='last snapshot: %cr'
 
 ```

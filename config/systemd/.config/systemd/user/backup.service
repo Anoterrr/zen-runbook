@@ -1,0 +1,11 @@
+# Personal files to Google Drive with restic (BACKUP.md). Started by backup.timer.
+[Unit]
+Description=restic backup of personal files (zen-runbook BACKUP.md)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/restic/env
+ExecStart=/usr/bin/restic backup --files-from %h/.config/restic/paths --exclude-caches
+ExecStartPost=/usr/bin/restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --prune

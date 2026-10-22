@@ -12,8 +12,8 @@ Most real compromises today come from phishing, a malicious browser extension, a
 
 - Built-in protection **stays on**: Windows Defender, macOS XProtect/Gatekeeper, Fedora SELinux (enforcing, not permissive). Don't turn any of them off "temporarily" to fix some other problem. That's how they end up off for good.
 - **Full-disk encryption**: BitLocker / FileVault / LUKS. See the per-OS sections below.
-- **Security updates install on their own**, everything else when I run `topgrade` (`README.md`). `topgrade` only runs when I remember to, so it can't be the only thing patching the machine. Per-OS setup below.
-- **Bitwarden** (`APPS.md`) for every password, unique per site, with 2FA on wherever it's offered. Leaked or reused passwords cause far more breaches than malware.
+- **Security updates install on their own**, everything else when I run `topgrade` (`setup/shell.md`). `topgrade` only runs when I remember to, so it can't be the only thing patching the machine. Per-OS setup below.
+- **Bitwarden** (`APPS.md`) for every password, unique per site (on the work Mac, the company's own password manager), with 2FA on wherever it's offered. Leaked or reused passwords cause far more breaches than malware.
 - **`curl | sh`**: the "Sources and owners" section in `README.md` lists the two pipe-to-shell installers this repo accepts (`mise`, Homebrew) and why. That doesn't extend to an install one-liner from some random blog post.
 
 ---
@@ -25,6 +25,7 @@ Brave blocks ads, trackers and fingerprinting by default, so this section tighte
 - **Shields** (`brave://settings/shields`): set trackers & ads blocking to Aggressive and "Upgrade connections to HTTPS" to Strict. Strict warns before loading a site over plain HTTP.
 - **Filter lists** (`brave://settings/shields/filters`): turn on the extra lists I want (for example the uBlock Origin lists and a regional list). This gives what uBlock Origin would, without installing an extension.
 - **Password manager**: Settings → Autofill and passwords → Password Manager, turn off "Offer to save passwords". Two password stores (Brave and Bitwarden) drift apart, and one of them is less protected. Keep Bitwarden only.
+- **Profiles on the work Mac**: personal web apps (`APPS.md`) and work accounts live in separate Brave profiles. Cookies, history and logins stay apart. Browser policies from MDM still apply to every profile on that machine.
 - **Extensions are the biggest risk here.** A legitimate extension gets sold, or its maintainer's account is hacked, and a malicious update goes out silently to everyone who has it. What to do:
   - Check `brave://extensions` every few months and remove anything you don't use.
   - Only install extensions from well-known, actively maintained publishers. Check the install count and the last update date first.
@@ -74,51 +75,9 @@ sudo systemctl restart systemd-resolved
 
 `Domains=~.` sends every lookup to these servers. Without it, systemd-resolved can also use the DNS server your router hands out over DHCP.
 
-### macOS (configuration profile)
+### macOS (work Mac): leave it to IT
 
-macOS only turns on encrypted DNS through a configuration profile. The network settings screen only takes plain IP addresses. Public Quad9 profiles exist, but the whole profile is this short XML, so I write my own and can read every line of it:
-
-```bash
-cat > ~/Downloads/quad9-doh.mobileconfig <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>PayloadType</key><string>Configuration</string>
-  <key>PayloadVersion</key><integer>1</integer>
-  <key>PayloadIdentifier</key><string>local.quad9.doh</string>
-  <key>PayloadUUID</key><string>$(uuidgen)</string>
-  <key>PayloadDisplayName</key><string>Quad9 encrypted DNS</string>
-  <key>PayloadContent</key>
-  <array>
-    <dict>
-      <key>PayloadType</key><string>com.apple.dnsSettings.managed</string>
-      <key>PayloadVersion</key><integer>1</integer>
-      <key>PayloadIdentifier</key><string>local.quad9.doh.dns</string>
-      <key>PayloadUUID</key><string>$(uuidgen)</string>
-      <key>PayloadDisplayName</key><string>Quad9 DoH</string>
-      <key>DNSSettings</key>
-      <dict>
-        <key>DNSProtocol</key><string>HTTPS</string>
-        <key>ServerURL</key><string>https://dns.quad9.net/dns-query</string>
-        <key>ServerAddresses</key>
-        <array>
-          <string>9.9.9.9</string>
-          <string>149.112.112.112</string>
-          <string>2620:fe::fe</string>
-          <string>2620:fe::9</string>
-        </array>
-      </dict>
-    </dict>
-  </array>
-</dict>
-</plist>
-EOF
-open ~/Downloads/quad9-doh.mobileconfig
-
-```
-
-`open` only registers the profile. To install it, open System Settings, search "Profiles", open "Quad9 encrypted DNS" and click Install.
+The Mac is my work machine, managed by the company's MDM, and DNS goes through their VPN and policies. A DNS profile of my own could conflict with theirs or get removed by it, so I don't install one. The Quad9 check above prints MISMATCH there, and that's expected.
 
 Most VPN apps take over DNS while connected and give it back when you disconnect. That's expected.
 
@@ -184,24 +143,16 @@ systemctl is-active --quiet dnf5-automatic.timer \
 
 Disk encryption (LUKS) is chosen **at install time**, with the "Encrypt my data" checkbox. There's no clean way to add it to a system that's already installed unencrypted. If `lsblk -f` doesn't show a `crypto_LUKS` type under your root partition, it's off, and the only fix is reinstalling with that box checked.
 
-### macOS
+### macOS (work Mac, managed by MDM)
+
+IT owns FileVault, the firewall and updates through MDM. I only check, and report anything that's off to IT instead of changing it, since a local change can break their compliance checks or get reverted:
 
 ```bash
-fdesetup status                                          # FileVault status
-sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate   # firewall status
+profiles status -type enrollment                                        # should say "MDM enrollment: Yes"
+fdesetup status                                                         # FileVault
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate   # firewall
 
 ```
-
-The macOS firewall is **off by default**. Turn it on:
-
-```bash
-sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
-
-```
-
-If FileVault is off: `sudo fdesetup enable`, or System Settings → Privacy & Security → FileVault.
-
-For automatic security updates: System Settings → General → Software Update → the (i) next to Automatic updates, and turn on "Install Security Responses and system files".
 
 ---
 

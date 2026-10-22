@@ -1,63 +1,85 @@
-# zen-runbook - everyday apps (Windows / Fedora KDE / macOS)
+# zen-runbook - apps (Windows / Fedora KDE / macOS)
 
-The apps I use day to day, with install commands for each platform wherever a package manager has them. This is a companion to `README.md`, but it doesn't follow that file's pillars: it's an inventory, not a minimal toolkit. On WSL2, GUI apps run on the Windows host, same as in `README.md`, so use the Windows list.
+Desktop apps, under the same pillars as `README.md`. This file says why each one is here, the lists in `packages/` install them, and `audit.sh` checks them. GUI apps on WSL2 run on the Windows host, so WSL2 uses the Windows list.
 
-Anything already in `README.md` (Git, Zed) is only referenced here.
+Each machine's role decides what goes on it:
 
-**Editors:** Zed (`README.md`) is the daily driver and Neovim (`README.md`) is the fallback when there's no GUI. **VS Code (below, Windows and macOS only) is only for Jupyter notebooks** when debugging data, which neither of the other two handles well.
+- **Windows + Fedora WSL2**: main machine. Data engineering, games, recording and editing, guitar.
+- **Fedora KDE**: where the main machine is headed. Same apps as Windows wherever they run on Linux, so the move doesn't change how I work.
+- **macOS**: work machine, managed by the company's MDM. Work tools, plus my notes and browser.
 
-**Bruno over Insomnia:** both are API clients, so I list one. Bruno stores collections as plain `.bru` text files that go straight into a git repo, with no account or cloud sync required. That fits the Organic and Reproducibility pillars in `README.md`. Insomnia uses its own collection format and pushes you toward a Kong cloud account.
+## Apps
 
-**Obsidian over Notion:** notes are local `.md` files instead of a proprietary cloud database, the same reason I picked Bruno. Obsidian also has an official **Verified** Flatpak on Fedora, while Notion has no Linux client at all (I used the web app before). Vault structure, daily flow and Syncthing sync across phone, Fedora and Mac are in `OBSIDIAN.md`.
+| App | Why | Win | KDE | Mac |
+|---|---|:-:|:-:|:-:|
+| Bitwarden | Every password, unique per site (`HARDENING.md`). The work Mac uses the company's | ✓ | ✓ | |
+| Brave | Browser, blocks trackers and ads by default (`HARDENING.md`) | ✓ | ✓ | ✓ |
+| Obsidian | Notes as local `.md` files (`OBSIDIAN.md`) | ✓ | ✓ | ✓ |
+| Syncthing | Syncs the vault peer to peer, no server in between (`OBSIDIAN.md`) | ✓ | ✓ | ✓ |
+| Bruno | API client. Collections are plain text files in git, no account | ✓ | ✓ | ✓ |
+| DBeaver | SQL client for every database I touch | ✓ | ✓ | ✓ |
+| Discord | Talking with friends while playing and recording | ✓ | ✓ | |
+| Anki | Spaced-repetition reviews | ✓ | ✓ | |
+| LibreOffice | Office files people send me | ✓ | ✓ | |
+| VLC | Plays any file, raw recordings included | ✓ | ✓ | |
+| OBS Studio | Records gameplay | ✓ | ✓ | |
+| DaVinci Resolve | Edits the channel's videos | ✓ | ✓ | |
+| Affinity | Thumbnails and graphics: vector, raster and layout in one free app | ✓ | | |
+| Inkscape, Krita | Same jobs as Affinity, but they run on Linux too, so they're the ones that move with me | ✓ | ✓ | |
+| Reaper | DAW for guitar and narration | ✓ | ✓ | |
+| Neural Amp Modeler | Amp simulation inside Reaper. The same `.nam` captures load on every OS, so the guitar setup moves to Linux unchanged | ✓ | ✓ | |
+| Steam | Games | ✓ | ✓ | |
+| NVIDIA App | GPU driver updates on Windows | ✓ | | |
+| Rancher Desktop | Containers and local Kubernetes for work (`setup/macos.md`) | | | ✓ |
+| p7zip | 7z support for KDE's archive tool. Windows 11 and macOS handle the common formats themselves | | ✓ | |
 
-**Anki: web app only (ankiweb.net), no desktop install.** I only review cards. I don't create or edit decks and don't use add-ons, and those are the only things AnkiWeb can't do. If that changes (building decks, add-ons like AnkiConnect or Image Occlusion), I'll need the desktop app.
+## Web apps
+
+They run the same on every machine, so they never block a move to Fedora and there's no platform column. `audit.sh` can't see them, so this list is the check. Each one is an account: password in Bitwarden, 2FA on, and when I stop using one I close the account instead of leaving it behind. Daily ones get Brave's "Install app", which gives them their own window and taskbar icon on Windows, Fedora and macOS alike.
+
+| App | Why | Where the data lives, and how I get it out |
+|---|---|---|
+| GitHub | Code, this repo included. `gh` covers the CLI side (`GIT.md`) | Every repo is a local clone. Issues and PRs through `gh` or GitHub's migration export |
+| YouTube Studio | Runs the channel | The edited masters stay on my disk, since YouTube only keeps its re-encode. Channel data through Google Takeout |
+| YouTube Music | Music | Library and playlists through Google Takeout |
+| Google Drive / Sheets | Sharing a file or sheet with someone who isn't on my tools. Also stores the encrypted backup (`BACKUP.md`) | Takeout, or download as `.xlsx`/`.docx`. Nothing lives only there |
+| AnkiWeb | Syncs the desktop Anki (where I create my own cards) with the phone | The real copy is desktop Anki's local collection, with its automatic backups and `.apkg` export |
+| Bunpro (free tier) | Japanese grammar | Progress only lives there. Free tier, so nothing paid is at stake |
+| WaniKani (free tier) | Japanese kanji | Progress through WaniKani's public API. Free tier, same as Bunpro |
+
+**Watching:** PhotoCraft (`storytold/photocraft`), an open-source, cross-platform Photoshop clone with PSD support. It's alpha (as of 2026-10), so it isn't on the list. If it gets a stable release and a winget package plus a verified Flatpak, it could replace Affinity and Krita on every machine.
+
+**Editors:** Zed is the daily driver and Neovim the fallback without a GUI (`setup/`). Notebooks for debugging data run with `uvx marimo edit <file>.py`: no install, `uv` is already in the toolkit, and a marimo notebook is a plain `.py` file that diffs cleanly in git.
 
 ---
 
 ## Windows
 
-Run in PowerShell. The accept flags skip the license prompts, so the whole list installs without stopping:
+The list is `packages/windows-apps.winget.json`, in the format winget's own `export` writes. Run it from Fedora WSL2, where the repo lives (it needs the interop step in `setup/wsl.md`). Anything already installed is skipped:
 
-```powershell
-$ids = @(
-    "Microsoft.VisualStudioCode", "DBeaver.DBeaver.Community", "Bruno.Bruno",
-    "Bitwarden.Bitwarden", "Brave.Brave", "Obsidian.Obsidian",
-    "TheDocumentFoundation.LibreOffice", "7zip.7zip", "Microsoft.PowerToys",
-    "VideoLAN.VLC", "OBSProject.OBSStudio", "Audacity.Audacity", "Discord.Discord",
-    "BlenderFoundation.Blender", "Inkscape.Inkscape", "KDE.Krita", "Canva.Affinity"
-)
-foreach ($id in $ids) {
-    winget install -e --id $id --accept-package-agreements --accept-source-agreements
-}
+```bash
+winget.exe import -i "$(wslpath -w ~/repos/zen-runbook/packages/windows-apps.winget.json)" \
+  --accept-package-agreements --accept-source-agreements
 
 ```
 
-No Docker Desktop. Containers run with Podman inside Fedora WSL2 (`README.md`, shared Fedora setup, step 3), same as on Fedora KDE and macOS.
+Three apps come straight from the vendor's site, because winget can't track them:
 
-Zed on Windows is covered by the "installed on host Windows side" step in `README.md` (`winget install -e --id ZedIndustries.Zed`). `git` isn't in this list because it lives inside Fedora WSL2 (`README.md`, shared Fedora setup, step 1). All dev work happens in the WSL2 filesystem, so a Windows copy of git would go unused.
+**NVIDIA App**: https://www.nvidia.com/software/nvidia-app/. winget only has the Microsoft Store build, which is a separate install from the one on NVIDIA's site and doesn't show up as the same package. It updates itself and the driver. NVIDIA publishes no checksum for it.
 
-**DaVinci Resolve** has no winget package. Blackmagic requires a free account to download it from https://www.blackmagicdesign.com/products/davinciresolve. The free edition can't import *or* export H.264/H.265 on any platform, because of patent licensing. If your footage is H.264 (most cameras and phones), transcode it first (`ffmpeg` to DNxHR, ProRes-compatible or FFV1) or buy the one-time Studio license, which removes the restriction.
+**Neural Amp Modeler**: the official plugin installer from https://www.neuralampmodeler.com/ (Steven Atkinson, its author). No winget package and no published checksum.
 
-Sanity check (same window as the install, it reuses `$ids`):
+**DaVinci Resolve** has no winget package. Download it from https://www.blackmagicdesign.com/products/davinciresolve (free account required). Blackmagic publishes no checksum either, so these three are the only downloads in this repo that can't be pinned and verified. The free version reads and exports H.264/H.265 on Windows through the OS's own codecs (as of 2026-10).
 
-```powershell
-foreach ($id in $ids) {
-    if (winget list -e --id $id 2>$null | Select-String -SimpleMatch $id) {
-        Write-Host "OK      $id"
-    } else {
-        Write-Host "MISSING $id"
-    }
-}
-
-```
+**OBS records audio as PCM**, not AAC: Settings → Output, Output Mode "Advanced" → Recording, container MKV, audio encoder "FFmpeg PCM (16-bit)". On Windows either works, but Resolve on Linux can't read AAC even in Studio, so recordings made today stay editable after the move. Video stays H.264/HEVC through NVENC. Recording Path: a `Recordings` folder in my user folder, not the default Videos, which `BACKUP.md` sends to Google Drive and raw gameplay would fill.
 
 ---
 
 ## Fedora KDE
 
-Two steps: add the repos once, then install everything. Terra is already added by `README.md`'s Fedora KDE section. Every app comes from its vendor, through a dnf repo or a Flatpak marked **Verified** on Flathub (the vendor publishes that build). DBeaver is the one exception, see below. `topgrade` (`README.md`) updates all of it.
-
 ### 1. Repos (one time)
+
+Terra is already added by `setup/fedora.md`.
 
 ```bash
 # RPM Fusion: VLC/OBS codecs, Steam, NVIDIA driver
@@ -77,61 +99,30 @@ flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flat
 ### 2. Install
 
 ```bash
-sudo dnf install -y p7zip p7zip-plugins libreoffice inkscape krita blender audacity \
-  vlc obs-studio brave-browser dbeaver-bin
-flatpak install -y flathub md.obsidian.Obsidian com.usebruno.Bruno com.bitwarden.desktop com.discordapp.Discord
+sudo dnf install -y $(grep -v '^#' ~/repos/zen-runbook/packages/fedora-kde-apps.txt)
+flatpak install -y flathub $(grep -v '^#' ~/repos/zen-runbook/packages/flathub.txt)
 
 ```
 
-Where each one comes from:
+Every app comes from Fedora, RPM Fusion (VLC and OBS, for the codecs), the vendor's own repo (Brave) or a Flatpak marked **Verified** on Flathub (the vendor publishes it). The exception is DBeaver (`dbeaver-bin`), from Terra: DBeaver has no dnf repo, its Flatpak isn't verified, and its RPM never updates. Terra is already trusted for Ghostty and Zed, so this adds no new source.
 
-- **dnf, Fedora repos**: p7zip, LibreOffice, Inkscape, Krita, Blender, Audacity. The `7-Zip` GUI only exists on Windows, and `p7zip` gives the same compression on the CLI and through the file manager's archive plugin.
-- **dnf, vendor or RPM Fusion repos**: VLC and OBS (RPM Fusion, for the codecs), Brave (Brave's own repo).
-- **Flatpak, verified**: Obsidian, Bruno, Bitwarden, Discord.
-- **dnf, Terra**: DBeaver (`dbeaver-bin`). DBeaver has no dnf repo of its own, its Flatpak isn't verified, and its official RPM is a one-off download that never updates. Terra repackages the official release and is already set up by `README.md`'s Fedora KDE section for Ghostty and Zed, so this adds no new trust. The catch: a Terra maintainer builds this package, not DBeaver.
+Not on Linux, and why that's fine:
 
-Vault structure, daily flow and Syncthing sync for Obsidian (Fedora/Mac/Android) are in `OBSIDIAN.md`.
+- **Affinity**: no Linux build (as of 2026-10). Inkscape and Krita cover the same jobs.
+- **Reaper and Neural Amp Modeler**: guitar moves when I move it, with no change to how I play. Reaper has a native Linux build on reaper.fm, same license, with LV2 support, but no package or verified Flatpak (as of 2026-10). NAM's author ships no Linux plugin. The LV2 port is `mikeoliphant/neural-amp-modeler-lv2`, a third party, and its releases publish a SHA-256 per file to pin against. The Scarlett Solo is class-compliant and needs no driver. Turn off its MSD mode once with Focusrite Control on Windows before moving.
 
-Sanity check:
+### 3. Steam & NVIDIA (RTX 5070 / Blackwell)
 
-```bash
-for bin in 7za libreoffice inkscape krita blender audacity vlc obs brave-browser; do
-    command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
-done
-rpm -q dbeaver-bin >/dev/null && echo "OK      dbeaver-bin" || echo "MISSING dbeaver-bin"
-for app in md.obsidian.Obsidian com.usebruno.Bruno com.bitwarden.desktop com.discordapp.Discord; do
-    flatpak info $app >/dev/null 2>&1 && echo "OK      $app" || echo "MISSING $app"
-done
-
-```
-
-### No good Linux path
-
-- **Affinity**: no Linux build, and no workaround I'd use.
-
-### Steam & NVIDIA (RTX 5070 / Blackwell)
-
-The only gaming entry in this file. A GPU driver is hardware setup, so it belongs here even though the rest of this list isn't about games. Based on a 2026 write-up from someone running this card on Fedora KDE Wayland ([falcao.org](https://falcao.org/posts/nvidia-fedora-kde-wayland/)) and the current RPM Fusion and Fedora docs.
-
-**1. NVIDIA driver.** Comes from RPM Fusion, added in step 1 above:
+**NVIDIA driver**, from RPM Fusion:
 
 ```bash
 sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda
 
 ```
 
-`xorg-x11-drv-nvidia-cuda` isn't needed for games. I install it for the PySpark and data work in `README.md`, since GPU-accelerated Python (RAPIDS, PyTorch) needs CUDA. **Blackwell cards (RTX 50-series) only work with NVIDIA's open-source kernel modules.** The proprietary modules don't support them. `akmod-nvidia` picks the open variant for Blackwell on its own, and the verify step below confirms that.
+snapper (`setup/fedora.md`) takes a snapshot before this and every later driver update, so a driver that breaks the desktop can be undone from a text console. `xorg-x11-drv-nvidia-cuda` is for GPU-accelerated Python (RAPIDS, PyTorch), not games. Blackwell cards only work with NVIDIA's open kernel modules, and `akmod-nvidia` picks those on its own. **Wait 2-5 minutes before rebooting**: `akmods` builds the module in the background, and an early reboot leaves it missing.
 
-**Wait 2-5 minutes** before rebooting. `akmods` builds the kernel module in the background after install, and if you reboot too early it won't be there.
-
-**2. Secure Boot (only if it's on):**
-
-```bash
-mokutil --sb-state   # tells you if this section applies at all
-
-```
-
-If enabled:
+**Secure Boot**, only if `mokutil --sb-state` says it's enabled:
 
 ```bash
 sudo kmodgenca -a
@@ -139,50 +130,39 @@ sudo mokutil --import /etc/pki/akmods/certs/public_key.der
 
 ```
 
-Set a temporary password when asked, then reboot. A blue MOK Manager screen shows up before Fedora boots: choose **Enroll MOK → Continue**, type the password and reboot again. Skip this and Secure Boot refuses to load the akmod-built module, so the driver just doesn't work, with no error.
+Set a temporary password, reboot, and in the blue MOK Manager screen choose **Enroll MOK → Continue**, type the password and reboot again. Without this, Secure Boot silently refuses the module.
 
-**3. Steam and gaming helpers:**
+**Steam and gaming helpers:**
 
 ```bash
 sudo dnf install -y steam gamemode gamemode.i686 mangohud mangohud.i686 vulkan-tools
 
 ```
 
-Turn on `gamemode` and `MangoHud` per game with this Steam launch option: `gamemoderun mangohud %command%`.
+Per game, Steam launch option: `gamemoderun mangohud %command%`.
 
-Sanity check:
+**Verify.** A driver that fails any of these isn't working:
 
 ```bash
-for bin in steam gamemoderun mangohud vulkaninfo nvidia-smi; do
+modinfo -F version nvidia                                    # driver version
+cat /sys/module/nvidia_drm/parameters/modeset                 # must print Y, required for Wayland
+modinfo nvidia | grep -i license                              # must say "Dual MIT/GPL": the open module loaded
+echo $XDG_SESSION_TYPE                                        # wayland
+nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
+vulkaninfo --summary | grep deviceName                        # Vulkan sees the GPU, which Proton/DXVK needs
+for bin in steam gamemoderun mangohud; do
     command -v $bin >/dev/null && echo "OK      $bin" || echo "MISSING $bin"
 done
 
 ```
 
-**4. Verify.** Check every line. A driver that installed but fails any of these isn't working:
+Known Blackwell issues (as of 2026-09, from [falcao.org](https://falcao.org/posts/nvidia-fedora-kde-wayland/)): suspend can hang on resume on some kernels (force `s2idle` sleep instead of `deep`), and VRR has to be turned on by hand in System Settings → Display & Monitor.
 
-```bash
-modinfo -F version nvidia                                    # driver version
-cat /sys/module/nvidia_drm/parameters/modeset                 # must print Y, required for Wayland
-modinfo nvidia | grep -i license                              # must say "Dual MIT/GPL", confirms the open module loaded, not the (unsupported) proprietary one
-echo $XDG_SESSION_TYPE                                        # wayland
-nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
-vulkaninfo --summary | grep deviceName                        # confirms Vulkan sees the GPU, which is what Proton/DXVK needs for Windows games
+### 4. DaVinci Resolve
 
-```
+Blackmagic only supports Rocky Linux (as of 2026-10). The free version on Linux can't read or write H.264/H.265 at all, and transcoding long gameplay sessions to an editing codec means hundreds of GB per hour. So on Fedora it's **Resolve Studio**: a one-time license that works on Windows and Linux, and on Linux decodes and encodes H.264/H.265 through the NVIDIA GPU. Even Studio can't read or write AAC on Linux, which is why OBS records PCM (Windows section), and exports go to MOV with Linear PCM audio, which YouTube accepts.
 
-**NVK/Nouveau, keep an eye on it but don't switch yet.** It's the open-source Vulkan driver for NVIDIA, part of Mesa and backed by Valve. It supports Blackwell and is Vulkan 1.4 conformant, but in late 2025 its lead developer put it at about 50% of the proprietary driver's speed, and ray tracing isn't finished. There's no date for catching up. Look again when Mesa drops the "experimental" label from NVK, since that's the project's own sign it's ready.
-
-**Known Blackwell issues** (from the write-up above, not fixed by anything here, see the source if you hit one):
-- On some kernel versions, suspend-to-idle can hang on resume. The workaround is forcing `s2idle` sleep instead of `deep`.
-- Variable refresh rate (VRR) doesn't turn on by itself. Enable it in System Settings → Display & Monitor, or with `kscreen-doctor`.
-
-### DaVinci Resolve: Fedora isn't supported, expect manual steps
-
-Blackmagic only supports Rocky Linux. Resolve runs on Fedora, but needs some work.
-
-1. Download the free `.run` installer from https://www.blackmagicdesign.com/products/davinciresolve (free account required, no dnf or Flatpak package).
-2. The installer checks for a zlib version Fedora no longer ships, and Resolve bundles old GLib libraries that clash with Fedora's. Skip the check to install. After that, move the bundled GLib copies out of the way and the app will use Fedora's newer GLib:
+Download the `.run` installer from Blackmagic, then skip its package check (it looks for a zlib Fedora no longer ships):
 
 ```bash
 chmod +x ./DaVinci_Resolve_*_Linux.run
@@ -190,59 +170,15 @@ SKIP_PACKAGE_CHECK=1 ./DaVinci_Resolve_*_Linux.run
 
 ```
 
-There's a community script, `fedora-resolve` on GitHub, that does all this plus GPU fixes in one command. It's a third-party script that patches system libraries, which is a lot more trust than anything else in this repo asks for (`HARDENING.md` explains why to read a script before running it). Do the manual steps. Only use the script after reading what it does.
-
-**The free version's codec limit applies on every platform:** no H.264/H.265 import or export, because of patent licensing. It hurts more on Linux, the platform Blackmagic supports least. Either transcode with `ffmpeg` to DNxHR, ProRes-compatible or FFV1 before importing, or buy the one-time Studio license, which removes the limit and adds hardware-accelerated decoding.
+If it fails to start, move Resolve's bundled GLib libraries out of its `libs` folder so it uses Fedora's.
 
 ---
 
 ## macOS
 
 ```bash
-brew install --cask visual-studio-code dbeaver-community bruno \
-  bitwarden brave-browser obsidian libreoffice keka vlc obs discord \
-  blender inkscape krita affinity
+brew bundle --file ~/repos/zen-runbook/packages/macos-apps.Brewfile
 
 ```
 
-`7-Zip` has no macOS build, and `keka` is the usual replacement. Syncthing on the Mac (for Obsidian vault sync) is in `OBSIDIAN.md`.
-
-### Podman (instead of Docker Desktop, same as Fedora)
-
-On macOS, `podman` is a Homebrew formula, not a cask, because it's a background tool and not a GUI app (same as Syncthing in `OBSIDIAN.md`). Containers need a Linux kernel and macOS doesn't have one, so Podman runs a small Linux VM underneath. `podman machine` creates and manages that VM for you:
-
-```bash
-brew install podman podman-compose
-podman machine init
-podman machine start
-
-```
-
-On macOS there's no `podman-docker` package like on Fedora, so `docker` and `docker-compose` don't exist as commands. On Fedora that package installs a real wrapper binary, which also works from cron jobs and other programs. On macOS the closest option is a shell alias, which only works in an interactive shell. It's already in the `~/.zshrc` block in `README.md`, which only sets it when there's no real `docker` binary:
-
-```bash
-alias docker='podman'
-alias docker-compose='podman-compose'
-
-```
-
-Sanity check:
-
-```bash
-brew list podman >/dev/null 2>&1 && echo "OK      podman" || echo "MISSING podman"
-podman machine list | grep -q Currently && echo "OK      podman machine running" || echo "MISSING run 'podman machine start'"
-
-```
-
-### No good macOS path
-
-- **DaVinci Resolve**: no Homebrew cask (people have asked, it was never added). Download it from https://www.blackmagicdesign.com/products/davinciresolve or the Mac App Store. The free version has the same H.264/H.265 limit, see the Fedora section for the fix.
-
-Sanity check:
-
-```bash
-for app in visual-studio-code dbeaver-community bruno bitwarden brave-browser obsidian libreoffice keka vlc obs discord blender inkscape krita affinity; do
-    brew list --cask $app >/dev/null 2>&1 && echo "OK      $app" || echo "MISSING $app"
-done
-
-```
+Work tools plus Obsidian, Syncthing and Brave, nothing personal beyond that. Rancher Desktop is in the toolkit Brewfile (`setup/macos.md`). Syncthing is a formula, not a cask, because it's a background service. `OBSIDIAN.md` starts it.

@@ -1,6 +1,6 @@
 # zen-runbook - git & GitHub CLI cheat sheet
 
-`README.md`'s "Git identity, SSH key, and commit signing" section covers the one-time setup. This file is for day-to-day use: the commands I run often, and which ones are safe to run without thinking.
+`setup/git.md` covers the one-time setup. This file is for day-to-day use: the commands I run often, and which ones are safe to run without thinking.
 
 **Every command below is marked safe, reversible, or DANGER.** Safe commands never lose work. Reversible ones can be undone if you know how (usually with `reflog`). DANGER commands can permanently destroy uncommitted or unpushed work, so check first every time, no matter how many times you've run them before.
 
@@ -28,7 +28,7 @@ git add -A                      # stage everything (new, modified, deleted)
 git commit -m "message"         # commit what's staged
 git log --oneline --graph -20   # last 20 commits, one line each, branch shape
 git show <commit>                # full diff of one commit
-git pull                        # fetch + integrate remote changes (rebases, per README.md's pull.rebase true)
+git pull                        # fetch + integrate remote changes (rebases, per config/git's pull.rebase true)
 git push                        # send local commits to the remote
 
 ```
@@ -126,7 +126,7 @@ This only works **locally**. It can't bring back a branch that was force-pushed 
 
 ## GitHub CLI (`gh`)
 
-Setup and login are in `README.md`. These are the commands I use day to day.
+Setup and login are in `setup/git.md`. These are the commands I use day to day.
 
 ```bash
 gh repo create <name> --public                 # create a new empty repo on GitHub
@@ -162,4 +162,4 @@ It also needs the `delete_repo` scope, which `gh auth login` doesn't grant by de
 
 ## `lazygit`
 
-Installed in `README.md`. It covers the everyday and branching commands above through a UI. Staging single hunks, browsing history and resolving merge conflicts are much faster there than typing the `git` flags by hand. I use the raw commands for scripts or when I need precision (like picking the exact commit for `rebase -i`), and `lazygit` for everything else.
+Installed by `setup/` (mise on Fedora, brew on macOS). It covers the everyday and branching commands above through a UI. Staging single hunks, browsing history and resolving merge conflicts are much faster there than typing the `git` flags by hand. I use the raw commands for scripts or when I need precision (like picking the exact commit for `rebase -i`), and `lazygit` for everything else.

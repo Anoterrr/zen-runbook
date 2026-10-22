@@ -1,0 +1,9 @@
+[misc]
+assume_yes = false
+no_retry = false
+
+[git]
+max_concurrency = 5
+
+[post_commands]
+"zen-runbook audit" = "$HOME/repos/zen-runbook/audit.sh"
