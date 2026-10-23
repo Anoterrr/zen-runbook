@@ -88,7 +88,7 @@ Three steps accept a known risk:
 | `tmux` | Terminal multiplexer. Sessions survive a closed window or a dropped SSH connection |
 | `lazygit` | Terminal UI for git |
 | `topgrade` | One command to upgrade Fedora or macOS (dnf/brew/mise/flatpak), then runs `audit.sh` |
-| `lnav` | Log viewer with regex highlighting, for DAG and pipeline run logs |
+| `lnav` | Log viewer with level detection and SQL, for DAG and pipeline run logs |
 | `jq` | JSON processor for API responses and pipeline output |
 | `duckdb` | SQL straight on CSV, Parquet and JSON files, no server. Checks an extract or a pipeline output the way the warehouse would |
 | `miller` (`mlr`) | awk/cut/sort by column name for CSV/TSV/JSON. Quick look at a data extract without opening Python |

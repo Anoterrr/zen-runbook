@@ -7,7 +7,7 @@ Every config file lives in `config/` and gets **linked** into your home, not cop
 ## 1. Link the configs
 
 ```bash
-stow -d ~/repos/zen-runbook/config -t ~ --no-folding zsh git ssh mise topgrade lnav
+stow -d ~/repos/zen-runbook/config -t ~ --no-folding zsh git ssh mise topgrade
 stow -d ~/repos/zen-runbook/config -t ~ --no-folding ghostty   # Fedora KDE and macOS only, Ghostty doesn't run on WSL
 
 ```
@@ -23,7 +23,6 @@ stow never overwrites. If a file is already there (a `~/.ssh/config` from before
 | `ssh/.ssh/config` | `~/.ssh/config.local`, loaded first so its values win |
 | `mise/.config/mise/config.toml` | none, per-project pins go in the project's own `mise.toml` |
 | `topgrade/.config/topgrade.toml` | none |
-| `lnav/.lnav/formats/installed/custom-highlights.json` | none |
 | `ghostty/.config/ghostty/config` | none |
 | `systemd/.config/systemd/user/backup.{service,timer}`, linked by `../BACKUP.md` | `~/.config/restic/`: password, paths, repository |
 
@@ -54,6 +53,16 @@ starship preset nerd-font-symbols --force -o ~/.config/starship.toml
 
 This one isn't in `config/`: it's starship's own preset, and regenerating it picks up the preset's updates. Without `--force`, starship refuses to write over an existing file, so running this again would fail.
 
+## 4. lnav (theme)
+
+Open any log with `lnav` and run:
+
+```
+:config /ui/theme dracula
+```
+
+lnav saves it to `~/.lnav/config.json`, so it's set once per machine. The default theme is loud and `dracula` is calmer. There are no custom highlights: the built-in `generic_log` format already detects error and warning lines, including `kubectl logs --timestamps` output with no level field.
+
 Now open zsh (`exec zsh`). From here on every shell loads the linked `~/.zshrc`.
 
 ---
@@ -75,10 +84,6 @@ New repos start on `main`, `pull` rebases instead of creating merge commits, com
 ### ssh (`config/ssh/.ssh/config`)
 
 `IdentitiesOnly` stops ssh from offering every key in `~/.ssh/` to every host. `HashKnownHosts` stops `~/.ssh/known_hosts` from listing the servers you've connected to in plain text. ssh only refuses a config that other users can write to, and the linked file isn't one.
-
-### lnav (`config/lnav/...`)
-
-Regex highlighting for error, warning and success lines in DAG and pipeline run logs.
 
 ### topgrade (`config/topgrade/.config/topgrade.toml`)
 

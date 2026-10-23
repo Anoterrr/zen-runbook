@@ -76,7 +76,7 @@ fi
 
 # --- links: every file in config/ should be a symlink back into the repo -------
 section links
-packages_to_link=(zsh git ssh mise topgrade lnav)
+packages_to_link=(zsh git ssh mise topgrade)
 [[ $platform != wsl ]] && packages_to_link+=(ghostty)
 [[ $platform != macos ]] && packages_to_link+=(systemd)
 for pkg in "${packages_to_link[@]}"; do
